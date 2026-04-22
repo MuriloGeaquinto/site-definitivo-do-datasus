@@ -279,7 +279,7 @@
     }
 
     document.getElementById('show-conclusions').addEventListener('click', function() {
-      fetch('conclusões.txt')
+      fetch('conclusoes.txt')
         .then(response => response.text())
         .then(text => {
           const formatted = formatText(text);
