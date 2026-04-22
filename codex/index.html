@@ -1,1 +1,2314 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta
+    name="description"
+    content="Painel informativo da saúde nos municípios do Espírito Santo com indicadores de leitos hospitalares e cobertura vacinal."
+  >
+  <title>Informações da Área da Saúde nos Municípios do Espírito Santo</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: "#eefbf7",
+              100: "#d3f5e8",
+              200: "#a9ebd5",
+              300: "#73dcb9",
+              400: "#3dc69b",
+              500: "#179f79",
+              600: "#0f7c5f",
+              700: "#0d634d",
+              800: "#0d4f3e",
+              900: "#0c4134"
+            },
+            ink: "#102a43",
+            sand: "#f8f5ef",
+            warning: "#d97706",
+            danger: "#b91c1c"
+          },
+          boxShadow: {
+            soft: "0 16px 40px rgba(16, 42, 67, 0.08)"
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    #municipalityLeafletMap {
+      min-height: 26rem;
+      background:
+        radial-gradient(circle at top, rgba(30, 41, 59, 0.88), rgba(15, 23, 42, 0.97)),
+        linear-gradient(180deg, rgba(15, 23, 42, 0.92), rgba(2, 6, 23, 0.98));
+    }
 
+    .leaflet-container {
+      font: inherit;
+      background: transparent;
+    }
+
+    #municipalityLeafletMap .leaflet-overlay-pane svg {
+      filter: drop-shadow(0 18px 30px rgba(15, 23, 42, 0.18));
+    }
+
+    #municipalityLeafletMap .leaflet-popup-content-wrapper,
+    #municipalityLeafletMap .leaflet-popup-tip,
+    #municipalityLeafletMap .leaflet-control-attribution {
+      background: rgba(15, 23, 42, 0.94);
+      color: #f8fafc;
+    }
+
+    #municipalityLeafletMap .leaflet-control-zoom a {
+      background: rgba(255, 255, 255, 0.95);
+      color: #102a43;
+      border-bottom-color: rgba(148, 163, 184, 0.5);
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-sand text-slate-800 antialiased">
+  <a href="#conteudo" class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-white focus:px-4 focus:py-2 focus:text-ink focus:shadow-lg">
+    Pular para o conteúdo principal
+  </a>
+
+  <header class="sticky top-0 z-40 border-b border-white/10 bg-ink/95 text-white backdrop-blur">
+    <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-6 py-4 lg:px-8">
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-[0.25em] text-brand-100">Observatório da Saúde Municipal</p>
+        <p class="mt-1 text-lg font-black">Espírito Santo</p>
+      </div>
+      <nav class="flex flex-wrap items-center gap-2 text-sm font-semibold">
+        <button data-view-target="inicio" class="view-nav rounded-full border border-white/15 px-4 py-2 text-white transition hover:bg-white/10">Início</button>
+        <button data-view-target="leitos" class="view-nav rounded-full border border-white/15 px-4 py-2 text-white transition hover:bg-white/10">Leitos</button>
+        <button data-view-target="vacinacao" class="view-nav rounded-full border border-white/15 px-4 py-2 text-white transition hover:bg-white/10">Vacinação</button>
+      </nav>
+    </div>
+  </header>
+
+  <main id="conteudo">
+    <section id="view-inicio" data-view="inicio" class="app-view">
+      <div class="relative overflow-hidden bg-ink text-white">
+        <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(61,198,155,0.35),_transparent_35%),radial-gradient(circle_at_bottom_right,_rgba(115,220,185,0.18),_transparent_30%)]"></div>
+        <div class="relative mx-auto max-w-7xl px-6 py-20 lg:px-8 lg:py-28">
+          <div class="grid gap-12 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
+            <div>
+              <p class="inline-flex rounded-full border border-white/15 bg-white/10 px-4 py-1 text-sm font-medium tracking-wide text-brand-100">
+                Painel público de dados municipais
+              </p>
+              <h1 class="mt-6 max-w-4xl text-4xl font-black leading-tight sm:text-5xl">
+                Informações da área da saúde nos municípios do Espírito Santo
+              </h1>
+              <p class="mt-6 max-w-3xl text-lg leading-8 text-slate-200">
+                Um único site para visualizar, comparar e interpretar dois temas centrais da saúde pública capixaba:
+                oferta de leitos hospitalares e cobertura vacinal municipal. Os indicadores abaixo foram construídos a
+                partir das tabelas fornecidas e organizados para facilitar leitura, busca por município e análise territorial.
+              </p>
+              <div class="mt-8 flex flex-wrap gap-4">
+                <button data-view-target="leitos" class="rounded-full bg-brand-400 px-6 py-3 text-sm font-semibold text-ink transition hover:bg-brand-300">
+                  Ver leitos hospitalares
+                </button>
+                <button data-view-target="vacinacao" class="rounded-full border border-white/20 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/10">
+                  Ver vacinação municipal
+                </button>
+                <button id="openConclusionsModalButton" type="button" class="rounded-full border border-brand-200/40 bg-white/10 px-6 py-3 text-sm font-semibold text-brand-50 transition hover:bg-white/20">
+                  Ler conclusões do desenvolvimento
+                </button>
+              </div>
+            </div>
+
+            <aside class="rounded-3xl border border-white/10 bg-white/10 p-6 shadow-soft backdrop-blur">
+              <h2 class="text-sm font-semibold uppercase tracking-[0.2em] text-brand-100">Leitura rápida</h2>
+              <dl class="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-1">
+                <div class="rounded-2xl bg-white/10 p-5">
+                  <dt class="text-sm text-slate-200">Municípios analisados</dt>
+                  <dd id="homeMunicipalityCount" class="mt-2 text-3xl font-black text-white">-</dd>
+                </div>
+                <div class="rounded-2xl bg-white/10 p-5">
+                  <dt class="text-sm text-slate-200">Média estadual de leitos</dt>
+                  <dd id="homeBedsAverage" class="mt-2 text-3xl font-black text-white">-</dd>
+                </div>
+                <div class="rounded-2xl bg-white/10 p-5">
+                  <dt class="text-sm text-slate-200">Cobertura vacinal média em 2022</dt>
+                  <dd id="homeVaccinationAverage" class="mt-2 text-3xl font-black text-white">-</dd>
+                </div>
+                <div class="rounded-2xl bg-white/10 p-5">
+                  <dt class="text-sm text-slate-200">Maior urgência regional</dt>
+                  <dd id="homeCriticalRegion" class="mt-2 text-2xl font-black text-white">-</dd>
+                </div>
+              </dl>
+            </aside>
+          </div>
+        </div>
+      </div>
+
+      <section class="mx-auto max-w-7xl px-6 py-14 lg:px-8">
+        <div class="grid gap-6 lg:grid-cols-2">
+          <article class="rounded-[2rem] bg-white p-8 shadow-soft">
+            <p class="text-sm font-semibold uppercase tracking-[0.25em] text-brand-700">Leitos hospitalares</p>
+            <h2 class="mt-4 text-3xl font-black text-ink">Oferta, desigualdade territorial e distância da meta da OMS</h2>
+            <p class="mt-4 text-base leading-7 text-slate-600">
+              A área de leitos reúne indicadores estaduais, regionais e municipais, recalcula taxas por mil habitantes,
+              sinaliza inconsistências da base e mostra a diferença entre leitos SUS e não SUS.
+            </p>
+            <div class="mt-8 flex flex-wrap gap-4">
+              <button data-view-target="leitos" class="rounded-full bg-brand-500 px-6 py-3 text-sm font-semibold text-white transition hover:bg-brand-600">
+                Explorar seção de leitos
+              </button>
+              <button data-open-map-mode="beds" class="rounded-full border border-brand-200 bg-brand-50 px-6 py-3 text-sm font-semibold text-brand-800 transition hover:bg-brand-100">
+                Abrir mapa dos leitos
+              </button>
+            </div>
+          </article>
+
+          <article class="rounded-[2rem] bg-white p-8 shadow-soft">
+            <p class="text-sm font-semibold uppercase tracking-[0.25em] text-brand-700">Vacinação municipal</p>
+            <h2 class="mt-4 text-3xl font-black text-ink">Cobertura por imunizante, tendências recentes e alertas locais</h2>
+            <p class="mt-4 text-base leading-7 text-slate-600">
+              A área de vacinação consolida BCG, poliomielite e tríplice viral, compara a situação de 2022 com a meta
+              de 95%, destaca municípios mais pressionados e organiza a leitura por região de saúde.
+            </p>
+            <div class="mt-8 flex flex-wrap gap-4">
+              <button data-view-target="vacinacao" class="rounded-full bg-brand-500 px-6 py-3 text-sm font-semibold text-white transition hover:bg-brand-600">
+                Explorar seção de vacinação
+              </button>
+              <button data-open-map-mode="vaccination" class="rounded-full border border-brand-200 bg-brand-50 px-6 py-3 text-sm font-semibold text-brand-800 transition hover:bg-brand-100">
+                Abrir mapa da vacinação
+              </button>
+            </div>
+          </article>
+        </div>
+      </section>
+    </section>
+
+    <section id="view-leitos" data-view="leitos" class="app-view hidden">
+      <div class="relative overflow-hidden bg-ink text-white">
+        <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(61,198,155,0.35),_transparent_35%),radial-gradient(circle_at_bottom_right,_rgba(115,220,185,0.18),_transparent_30%)]"></div>
+        <div class="relative mx-auto max-w-7xl px-6 py-16 lg:px-8 lg:py-20">
+          <div class="grid gap-12 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
+            <div>
+              <p class="inline-flex rounded-full border border-white/15 bg-white/10 px-4 py-1 text-sm font-medium tracking-wide text-brand-100">
+                Painel de leitos hospitalares
+              </p>
+              <h1 class="mt-6 max-w-3xl text-4xl font-black leading-tight sm:text-5xl">
+                Desigualdade de leitos hospitalares nos municípios do Espírito Santo
+              </h1>
+              <p class="mt-6 max-w-2xl text-lg leading-8 text-slate-200">
+                A leitura estadual compara a oferta municipal de 2023 com a referência da OMS, evidencia os municípios com
+                registro zerado ou incoerente e reforça a diferença entre a capacidade do SUS e a oferta não SUS.
+              </p>
+              <div class="mt-8 flex flex-wrap gap-4">
+                <button data-open-map-mode="beds" class="rounded-full bg-brand-400 px-6 py-3 text-sm font-semibold text-ink transition hover:bg-brand-300">
+                  Abrir mapa de leitos
+                </button>
+                <button data-view-target="inicio" class="rounded-full border border-white/20 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/10">
+                  Voltar ao início
+                </button>
+              </div>
+            </div>
+
+            <aside class="rounded-3xl border border-white/10 bg-white/10 p-6 shadow-soft backdrop-blur">
+              <h2 class="text-sm font-semibold uppercase tracking-[0.2em] text-brand-100">Leitura rápida</h2>
+              <dl class="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-1">
+                <div class="rounded-2xl bg-white/10 p-5">
+                  <dt class="text-sm text-slate-200">Média estadual</dt>
+                  <dd id="bedsHeroAverage" class="mt-2 text-3xl font-black text-white">-</dd>
+                </div>
+                <div class="rounded-2xl bg-white/10 p-5">
+                  <dt class="text-sm text-slate-200">Meta OMS</dt>
+                  <dd class="mt-2 text-3xl font-black text-white">3,0 leitos/1.000</dd>
+                </div>
+                <div class="rounded-2xl bg-white/10 p-5">
+                  <dt class="text-sm text-slate-200">Região mais crítica</dt>
+                  <dd id="bedsHeroCriticalRegion" class="mt-2 text-2xl font-black text-white">-</dd>
+                </div>
+                <div class="rounded-2xl bg-white/10 p-5">
+                  <dt class="text-sm text-slate-200">Municípios em alerta</dt>
+                  <dd id="bedsHeroAlertCount" class="mt-2 text-3xl font-black text-white">-</dd>
+                </div>
+              </dl>
+            </aside>
+          </div>
+        </div>
+      </div>
+
+      <section class="mx-auto max-w-7xl px-6 py-14 lg:px-8">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div class="max-w-3xl">
+            <p class="text-sm font-semibold uppercase tracking-[0.25em] text-brand-700">Visão Geral</p>
+            <h2 class="mt-3 text-3xl font-black text-ink sm:text-4xl">Indicadores para revelar a pressão por leitos</h2>
+            <p class="mt-4 text-base leading-7 text-slate-600">
+              Os totais abaixo usam a população municipal de 2022 e os leitos informados para 2023. Quando a taxa da
+              tabela diverge do cálculo realizado a partir de população e total de leitos, o painel exibe a versão recalculada.
+            </p>
+          </div>
+          <div class="rounded-2xl border border-brand-100 bg-white px-5 py-4 shadow-soft">
+            <p class="text-sm font-medium text-slate-500">Base utilizada</p>
+            <p class="mt-1 text-lg font-semibold text-ink">78 municípios do Espírito Santo</p>
+          </div>
+        </div>
+
+        <div class="mt-10 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+          <article class="rounded-3xl bg-white p-6 shadow-soft">
+            <p class="text-sm font-medium text-slate-500">Leitos totais em 2023</p>
+            <p id="bedsTotalCard" class="mt-2 text-4xl font-black text-ink">-</p>
+            <p class="mt-3 text-sm leading-6 text-slate-600">Soma da capacidade informada na base municipal de leitos.</p>
+          </article>
+          <article class="rounded-3xl bg-white p-6 shadow-soft">
+            <p class="text-sm font-medium text-slate-500">Leitos SUS em 2023</p>
+            <p id="bedsSusCard" class="mt-2 text-4xl font-black text-brand-700">-</p>
+            <p class="mt-3 text-sm leading-6 text-slate-600">Oferta registrada como disponível para o SUS.</p>
+          </article>
+          <article class="rounded-3xl bg-white p-6 shadow-soft">
+            <p class="text-sm font-medium text-slate-500">Leitos não SUS em 2023</p>
+            <p id="bedsNonSusCard" class="mt-2 text-4xl font-black text-warning">-</p>
+            <p class="mt-3 text-sm leading-6 text-slate-600">Capacidade hospitalar fora do SUS registrada na tabela.</p>
+          </article>
+          <article class="rounded-3xl bg-white p-6 shadow-soft">
+            <p class="text-sm font-medium text-slate-500">Registros com ressalva</p>
+            <p id="bedsFlagsCard" class="mt-2 text-4xl font-black text-danger">-</p>
+            <p class="mt-3 text-sm leading-6 text-slate-600">Zerados ou com divergência entre taxa informada e taxa recalculada.</p>
+          </article>
+        </div>
+
+        <div class="mt-10 grid gap-6 xl:grid-cols-2">
+          <article class="rounded-3xl bg-white p-6 shadow-soft">
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <h3 class="text-xl font-bold text-ink">ES vs. Meta da OMS</h3>
+                <p class="mt-2 text-sm leading-6 text-slate-600">Comparação direta entre a média estadual recalculada e o parâmetro de 3 leitos por mil habitantes.</p>
+              </div>
+              <span class="rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-brand-700">Benchmark</span>
+            </div>
+            <div class="mt-6 h-80">
+              <canvas id="bedsComparisonChart" role="img" aria-label="Gráfico comparando a média estadual de leitos com a meta da OMS"></canvas>
+            </div>
+          </article>
+
+          <article class="rounded-3xl bg-white p-6 shadow-soft">
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <h3 class="text-xl font-bold text-ink">Regiões mais críticas</h3>
+                <p class="mt-2 text-sm leading-6 text-slate-600">Ranking regional calculado pela taxa de leitos por mil habitantes em 2023.</p>
+              </div>
+              <span class="rounded-full bg-red-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-red-700">Prioridade</span>
+            </div>
+            <div class="mt-6 h-80">
+              <canvas id="bedsRegionsChart" role="img" aria-label="Gráfico com as regiões de saúde mais críticas do Espírito Santo"></canvas>
+            </div>
+          </article>
+
+          <article class="rounded-3xl bg-white p-6 shadow-soft">
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <h3 class="text-xl font-bold text-ink">Evolução dos leitos SUS</h3>
+                <p class="mt-2 text-sm leading-6 text-slate-600">Leitos SUS por mil habitantes com base nos anos disponíveis na planilha: 2019, 2021 e 2023.</p>
+              </div>
+              <span class="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-700">Histórico</span>
+            </div>
+            <div class="mt-6 h-80">
+              <canvas id="bedsTrendChart" role="img" aria-label="Gráfico de linha com a evolução dos leitos SUS no Espírito Santo"></canvas>
+            </div>
+          </article>
+
+          <article class="rounded-3xl bg-white p-6 shadow-soft">
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <h3 class="text-xl font-bold text-ink">Leitos SUS vs. não SUS</h3>
+                <p class="mt-2 text-sm leading-6 text-slate-600">A composição evidencia a diferença entre a oferta pública e a capacidade fora do SUS.</p>
+              </div>
+              <span class="rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-sky-700">Composição</span>
+            </div>
+            <div class="mt-6 h-80">
+              <canvas id="bedsSplitChart" role="img" aria-label="Gráfico de rosca com leitos SUS e não SUS"></canvas>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="border-y border-slate-200 bg-white">
+        <div class="mx-auto max-w-7xl px-6 py-14 lg:px-8">
+          <div class="grid gap-10 lg:grid-cols-[0.95fr_1.05fr] lg:items-start">
+            <div>
+              <p class="text-sm font-semibold uppercase tracking-[0.25em] text-brand-700">Busca Dinâmica</p>
+              <h2 class="mt-3 text-3xl font-black text-ink sm:text-4xl">Descubra a situação de leitos do seu município</h2>
+              <p class="mt-4 max-w-2xl text-base leading-7 text-slate-600">
+                A consulta mostra a taxa recalculada por mil habitantes, a região de saúde, a composição SUS/não SUS e
+                eventuais alertas metodológicos da base.
+              </p>
+
+              <form class="mt-8 space-y-4" onsubmit="event.preventDefault()">
+                <label for="bedsSearch" class="block text-sm font-semibold text-ink">Buscar município</label>
+                <input
+                  id="bedsSearch"
+                  list="municipalityOptions"
+                  type="search"
+                  placeholder="Ex.: Linhares"
+                  autocomplete="off"
+                  class="w-full rounded-2xl border border-slate-300 bg-slate-50 px-5 py-4 text-base text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-brand-500 focus:bg-white focus:ring-4 focus:ring-brand-100"
+                >
+              </form>
+            </div>
+
+            <article class="rounded-3xl bg-slate-50 p-6 shadow-soft">
+              <div class="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <p class="text-sm font-medium text-slate-500">Painel municipal de leitos</p>
+                  <h3 id="bedsResultName" class="mt-1 text-2xl font-black text-ink">Selecione um município</h3>
+                </div>
+                <span id="bedsResultBadge" class="rounded-full bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-700">Sem consulta</span>
+              </div>
+
+              <div id="bedsResultSummary" class="mt-6 rounded-2xl border border-dashed border-slate-300 bg-white p-5 text-sm leading-6 text-slate-500">
+                Nenhum município pesquisado ainda. Ao buscar, você verá a taxa de leitos por mil habitantes e as observações da base.
+              </div>
+
+              <dl class="mt-6 grid gap-4 sm:grid-cols-2">
+                <div class="rounded-2xl bg-white p-5">
+                  <dt class="text-sm text-slate-500">Região</dt>
+                  <dd id="bedsResultRegion" class="mt-2 text-lg font-bold text-ink">-</dd>
+                </div>
+                <div class="rounded-2xl bg-white p-5">
+                  <dt class="text-sm text-slate-500">Taxa recalculada</dt>
+                  <dd id="bedsResultRatio" class="mt-2 text-lg font-bold text-ink">-</dd>
+                </div>
+                <div class="rounded-2xl bg-white p-5">
+                  <dt class="text-sm text-slate-500">Leitos SUS</dt>
+                  <dd id="bedsResultSus" class="mt-2 text-lg font-bold text-ink">-</dd>
+                </div>
+                <div class="rounded-2xl bg-white p-5">
+                  <dt class="text-sm text-slate-500">Leitos não SUS</dt>
+                  <dd id="bedsResultNonSus" class="mt-2 text-lg font-bold text-ink">-</dd>
+                </div>
+              </dl>
+            </article>
+          </div>
+
+          <div class="mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-4" id="bedsHighlights"></div>
+        </div>
+      </section>
+
+      <section class="mx-auto max-w-7xl px-6 py-14 lg:px-8">
+        <div class="grid gap-10 lg:grid-cols-[1fr_0.9fr]">
+          <div>
+            <p class="text-sm font-semibold uppercase tracking-[0.25em] text-brand-700">Metodologia</p>
+            <h2 class="mt-3 text-3xl font-black text-ink sm:text-4xl">Notas técnicas para interpretação dos leitos</h2>
+            <div class="mt-6 space-y-4 text-base leading-7 text-slate-600">
+              <p>
+                O painel usa os valores fornecidos na tabela de leitos para os 78 municípios do Espírito Santo. A taxa
+                por mil habitantes é recalculada com base em <strong>população de 2022</strong> e <strong>total de leitos em 2023</strong>.
+              </p>
+              <p>
+                Quando a taxa informada na planilha diverge do cálculo realizado, o município permanece visível com
+                ressalva metodológica. Nesta base, <span id="bedsMethodFlags">-</span> registros exigem atenção, sendo
+                <span id="bedsMethodZeros">-</span> com total zerado, <span id="bedsMethodInconsistent">-</span> com divergência entre taxa informada e taxa recalculada e
+                <span id="bedsMethodCompositionMismatch">-</span> com diferença entre o total informado e a soma de leitos SUS e não SUS.
+              </p>
+              <p>
+                O alerta visual considera três faixas: <strong class="text-emerald-700">verde</strong> para taxa igual ou
+                acima de 3, <strong class="text-amber-700">amarelo</strong> para taxa entre 2 e 2,99 e
+                <strong class="text-red-700">vermelho</strong> para taxas abaixo de 2 ou registros zerados.
+              </p>
+            </div>
+          </div>
+
+          <aside class="rounded-3xl bg-white p-6 shadow-soft">
+            <h3 class="text-xl font-bold text-ink">Como ler os destaques</h3>
+            <ul class="mt-6 space-y-4 text-sm leading-6 text-slate-600">
+              <li class="rounded-2xl bg-emerald-50 p-4">
+                <strong class="text-emerald-800">Adequado:</strong> município em conformidade com a meta da OMS.
+              </li>
+              <li class="rounded-2xl bg-amber-50 p-4">
+                <strong class="text-amber-800">Atenção:</strong> situação intermediária, ainda abaixo da referência ideal.
+              </li>
+              <li class="rounded-2xl bg-red-50 p-4">
+                <strong class="text-red-800">Crítico:</strong> cobertura baixa ou registro zerado de leitos.
+              </li>
+              <li class="rounded-2xl bg-slate-50 p-4">
+                <strong class="text-slate-800">Ressalva:</strong> quando a taxa informada diverge da taxa recalculada, o painel prioriza o valor recalculado e mantém a observação visível.
+              </li>
+            </ul>
+          </aside>
+        </div>
+      </section>
+    </section>
+
+    <section id="view-vacinacao" data-view="vacinacao" class="app-view hidden">
+      <div class="relative overflow-hidden bg-ink text-white">
+        <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(61,198,155,0.35),_transparent_35%),radial-gradient(circle_at_bottom_right,_rgba(115,220,185,0.18),_transparent_30%)]"></div>
+        <div class="relative mx-auto max-w-7xl px-6 py-16 lg:px-8 lg:py-20">
+          <div class="grid gap-12 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
+            <div>
+              <p class="inline-flex rounded-full border border-white/15 bg-white/10 px-4 py-1 text-sm font-medium tracking-wide text-brand-100">
+                Painel de cobertura vacinal
+              </p>
+              <h1 class="mt-6 max-w-3xl text-4xl font-black leading-tight sm:text-5xl">
+                Vacinação nos municípios do Espírito Santo
+              </h1>
+              <p class="mt-6 max-w-2xl text-lg leading-8 text-slate-200">
+                A seção reúne BCG, poliomielite e tríplice viral, com foco nos valores mais recentes de 2022, na
+                trajetória histórica disponível e nas desigualdades entre regiões e municípios.
+              </p>
+              <div class="mt-8 flex flex-wrap gap-4">
+                <button data-open-map-mode="vaccination" class="rounded-full bg-brand-400 px-6 py-3 text-sm font-semibold text-ink transition hover:bg-brand-300">
+                  Abrir mapa da vacinação
+                </button>
+                <button data-view-target="inicio" class="rounded-full border border-white/20 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/10">
+                  Voltar ao início
+                </button>
+              </div>
+            </div>
+
+            <aside class="rounded-3xl border border-white/10 bg-white/10 p-6 shadow-soft backdrop-blur">
+              <h2 class="text-sm font-semibold uppercase tracking-[0.2em] text-brand-100">Leitura rápida</h2>
+              <dl class="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-1">
+                <div class="rounded-2xl bg-white/10 p-5">
+                  <dt class="text-sm text-slate-200">Média vacinal 2022</dt>
+                  <dd id="vaccinationHeroAverage" class="mt-2 text-3xl font-black text-white">-</dd>
+                </div>
+                <div class="rounded-2xl bg-white/10 p-5">
+                  <dt class="text-sm text-slate-200">Meta de referência</dt>
+                  <dd class="mt-2 text-3xl font-black text-white">95%</dd>
+                </div>
+                <div class="rounded-2xl bg-white/10 p-5">
+                  <dt class="text-sm text-slate-200">Região com menor média</dt>
+                  <dd id="vaccinationHeroCriticalRegion" class="mt-2 text-2xl font-black text-white">-</dd>
+                </div>
+                <div class="rounded-2xl bg-white/10 p-5">
+                  <dt class="text-sm text-slate-200">Municípios sem meta em 2022</dt>
+                  <dd id="vaccinationHeroNoneHits" class="mt-2 text-3xl font-black text-white">-</dd>
+                </div>
+              </dl>
+            </aside>
+          </div>
+        </div>
+      </div>
+
+      <section class="mx-auto max-w-7xl px-6 py-14 lg:px-8">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div class="max-w-3xl">
+            <p class="text-sm font-semibold uppercase tracking-[0.25em] text-brand-700">Visão Geral</p>
+            <h2 class="mt-3 text-3xl font-black text-ink sm:text-4xl">Cobertura vacinal recente e tendência histórica</h2>
+            <p class="mt-4 text-base leading-7 text-slate-600">
+              Os indicadores priorizam o ano de 2022, sem perder a comparação com a trajetória recente de
+              poliomielite e tríplice viral. A meta de referência da base é 95%.
+            </p>
+          </div>
+          <div class="rounded-2xl border border-brand-100 bg-white px-5 py-4 shadow-soft">
+            <p class="text-sm font-medium text-slate-500">Base utilizada</p>
+            <p class="mt-1 text-lg font-semibold text-ink">BCG, poliomielite e tríplice viral por município</p>
+          </div>
+        </div>
+
+        <div class="mt-10 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+          <article class="rounded-3xl bg-white p-6 shadow-soft">
+            <p class="text-sm font-medium text-slate-500">Média BCG em 2022</p>
+            <p id="vaccinationBcgCard" class="mt-2 text-4xl font-black text-ink">-</p>
+            <p class="mt-3 text-sm leading-6 text-slate-600">Cobertura média municipal da BCG no ano mais recente da base.</p>
+          </article>
+          <article class="rounded-3xl bg-white p-6 shadow-soft">
+            <p class="text-sm font-medium text-slate-500">Média pólio em 2022</p>
+            <p id="vaccinationPolioCard" class="mt-2 text-4xl font-black text-brand-700">-</p>
+            <p class="mt-3 text-sm leading-6 text-slate-600">Cobertura municipal média da poliomielite em 2022.</p>
+          </article>
+          <article class="rounded-3xl bg-white p-6 shadow-soft">
+            <p class="text-sm font-medium text-slate-500">Média tríplice viral em 2022</p>
+            <p id="vaccinationTripleCard" class="mt-2 text-4xl font-black text-warning">-</p>
+            <p class="mt-3 text-sm leading-6 text-slate-600">Cobertura municipal média da tríplice viral em 2022.</p>
+          </article>
+          <article class="rounded-3xl bg-white p-6 shadow-soft">
+            <p class="text-sm font-medium text-slate-500">Municípios sem meta atingida</p>
+            <p id="vaccinationNoneHitsCard" class="mt-2 text-4xl font-black text-danger">-</p>
+            <p class="mt-3 text-sm leading-6 text-slate-600">Locais que não atingiram 95% em nenhum dos três imunizantes em 2022.</p>
+          </article>
+        </div>
+
+        <div class="mt-10 grid gap-6 xl:grid-cols-2">
+          <article class="rounded-3xl bg-white p-6 shadow-soft">
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <h3 class="text-xl font-bold text-ink">Cobertura média em 2022</h3>
+                <p class="mt-2 text-sm leading-6 text-slate-600">Comparação entre BCG, poliomielite e tríplice viral frente à meta de 95%.</p>
+              </div>
+              <span class="rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-brand-700">2022</span>
+            </div>
+            <div class="mt-6 h-80">
+              <canvas id="vaccinationCoverageChart" role="img" aria-label="Gráfico com a cobertura média de vacinação em 2022"></canvas>
+            </div>
+          </article>
+
+          <article class="rounded-3xl bg-white p-6 shadow-soft">
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <h3 class="text-xl font-bold text-ink">Tendência recente</h3>
+                <p class="mt-2 text-sm leading-6 text-slate-600">Média municipal dos anos disponíveis para poliomielite e tríplice viral.</p>
+              </div>
+              <span class="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-700">Histórico</span>
+            </div>
+            <div class="mt-6 h-80">
+              <canvas id="vaccinationTrendChart" role="img" aria-label="Gráfico de linha com a tendência de vacinação"></canvas>
+            </div>
+          </article>
+
+          <article class="rounded-3xl bg-white p-6 shadow-soft">
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <h3 class="text-xl font-bold text-ink">Regiões com menor média em 2022</h3>
+                <p class="mt-2 text-sm leading-6 text-slate-600">Média simples dos três imunizantes em 2022 por região de saúde.</p>
+              </div>
+              <span class="rounded-full bg-red-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-red-700">Território</span>
+            </div>
+            <div class="mt-6 h-80">
+              <canvas id="vaccinationRegionsChart" role="img" aria-label="Gráfico com regiões de saúde e cobertura vacinal média"></canvas>
+            </div>
+          </article>
+
+          <article class="rounded-3xl bg-white p-6 shadow-soft">
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <h3 class="text-xl font-bold text-ink">Municípios mais pressionados</h3>
+                <p class="mt-2 text-sm leading-6 text-slate-600">Menores médias de 2022 considerando BCG, poliomielite e tríplice viral.</p>
+              </div>
+              <span class="rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-sky-700">Prioridade</span>
+            </div>
+            <div class="mt-6 h-80">
+              <canvas id="vaccinationBottomChart" role="img" aria-label="Gráfico com os municípios mais pressionados na vacinação"></canvas>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="border-y border-slate-200 bg-white">
+        <div class="mx-auto max-w-7xl px-6 py-14 lg:px-8">
+          <div class="grid gap-10 lg:grid-cols-[0.95fr_1.05fr] lg:items-start">
+            <div>
+              <p class="text-sm font-semibold uppercase tracking-[0.25em] text-brand-700">Busca Dinâmica</p>
+              <h2 class="mt-3 text-3xl font-black text-ink sm:text-4xl">Descubra a situação vacinal do seu município</h2>
+              <p class="mt-4 max-w-2xl text-base leading-7 text-slate-600">
+                A busca resume os três imunizantes em 2022, mostra quantas metas de 95% foram alcançadas e apresenta a
+                média municipal do ano.
+              </p>
+
+              <form class="mt-8 space-y-4" onsubmit="event.preventDefault()">
+                <label for="vaccinationSearch" class="block text-sm font-semibold text-ink">Buscar município</label>
+                <input
+                  id="vaccinationSearch"
+                  list="municipalityOptions"
+                  type="search"
+                  placeholder="Ex.: Colatina"
+                  autocomplete="off"
+                  class="w-full rounded-2xl border border-slate-300 bg-slate-50 px-5 py-4 text-base text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-brand-500 focus:bg-white focus:ring-4 focus:ring-brand-100"
+                >
+              </form>
+            </div>
+
+            <article class="rounded-3xl bg-slate-50 p-6 shadow-soft">
+              <div class="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <p class="text-sm font-medium text-slate-500">Painel municipal de vacinação</p>
+                  <h3 id="vaccinationResultName" class="mt-1 text-2xl font-black text-ink">Selecione um município</h3>
+                </div>
+                <span id="vaccinationResultBadge" class="rounded-full bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-700">Sem consulta</span>
+              </div>
+
+              <div id="vaccinationResultSummary" class="mt-6 rounded-2xl border border-dashed border-slate-300 bg-white p-5 text-sm leading-6 text-slate-500">
+                Nenhum município pesquisado ainda. Ao buscar, você verá a cobertura de 2022 e a leitura resumida dos imunizantes.
+              </div>
+
+              <dl class="mt-6 grid gap-4 sm:grid-cols-2">
+                <div class="rounded-2xl bg-white p-5">
+                  <dt class="text-sm text-slate-500">Região</dt>
+                  <dd id="vaccinationResultRegion" class="mt-2 text-lg font-bold text-ink">-</dd>
+                </div>
+                <div class="rounded-2xl bg-white p-5">
+                  <dt class="text-sm text-slate-500">Média 2022</dt>
+                  <dd id="vaccinationResultAverage" class="mt-2 text-lg font-bold text-ink">-</dd>
+                </div>
+                <div class="rounded-2xl bg-white p-5">
+                  <dt class="text-sm text-slate-500">BCG 2022</dt>
+                  <dd id="vaccinationResultBcg" class="mt-2 text-lg font-bold text-ink">-</dd>
+                </div>
+                <div class="rounded-2xl bg-white p-5">
+                  <dt class="text-sm text-slate-500">Pólio 2022</dt>
+                  <dd id="vaccinationResultPolio" class="mt-2 text-lg font-bold text-ink">-</dd>
+                </div>
+                <div class="rounded-2xl bg-white p-5 sm:col-span-2">
+                  <dt class="text-sm text-slate-500">Tríplice viral 2022</dt>
+                  <dd id="vaccinationResultTriple" class="mt-2 text-lg font-bold text-ink">-</dd>
+                </div>
+              </dl>
+            </article>
+          </div>
+
+          <div class="mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-4" id="vaccinationHighlights"></div>
+        </div>
+      </section>
+
+      <section class="mx-auto max-w-7xl px-6 py-14 lg:px-8">
+        <div class="grid gap-10 lg:grid-cols-[1fr_0.9fr]">
+          <div>
+            <p class="text-sm font-semibold uppercase tracking-[0.25em] text-brand-700">Metodologia</p>
+            <h2 class="mt-3 text-3xl font-black text-ink sm:text-4xl">Notas técnicas para interpretação da vacinação</h2>
+            <div class="mt-6 space-y-4 text-base leading-7 text-slate-600">
+              <p>
+                Esta seção usa a tabela de cobertura vacinal municipal para BCG, poliomielite e tríplice viral. A
+                leitura principal do painel prioriza os valores de 2022 e usa a meta de 95% informada na base.
+              </p>
+              <p>
+                A média municipal de 2022 é calculada pela média simples entre BCG, pólio e tríplice viral. Coberturas
+                acima de 100% não foram removidas, pois podem ocorrer por diferenças entre doses aplicadas e população de referência.
+              </p>
+              <p>
+                No conjunto analisado, <span id="vaccinationMethodNoneHits">-</span> municípios não atingiram a meta em
+                nenhum dos três imunizantes em 2022, e <span id="vaccinationMethodTwoPlus">-</span> conseguiram atingir
+                a meta em pelo menos dois.
+              </p>
+            </div>
+          </div>
+
+          <aside class="rounded-3xl bg-white p-6 shadow-soft">
+            <h3 class="text-xl font-bold text-ink">Como ler os destaques</h3>
+            <ul class="mt-6 space-y-4 text-sm leading-6 text-slate-600">
+              <li class="rounded-2xl bg-emerald-50 p-4">
+                <strong class="text-emerald-800">Melhor cenário:</strong> média de 2022 muito próxima da meta ou dois imunizantes já acima de 95%.
+              </li>
+              <li class="rounded-2xl bg-amber-50 p-4">
+                <strong class="text-amber-800">Atenção:</strong> município com alguma recuperação pontual, mas ainda distante da meta na média.
+              </li>
+              <li class="rounded-2xl bg-red-50 p-4">
+                <strong class="text-red-800">Crítico:</strong> nenhum imunizante atingiu a meta e a média anual está baixa.
+              </li>
+              <li class="rounded-2xl bg-slate-50 p-4">
+                <strong class="text-slate-800">Importante:</strong> a trajetória histórica aparece apenas para pólio e tríplice viral porque são os anos disponíveis na base.
+              </li>
+            </ul>
+          </aside>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <datalist id="municipalityOptions"></datalist>
+
+  <div
+    id="mapModal"
+    class="fixed inset-0 z-50 hidden"
+    role="dialog"
+    aria-modal="true"
+    aria-hidden="true"
+    aria-labelledby="mapModalTitle"
+  >
+    <div id="mapModalBackdrop" class="absolute inset-0 bg-slate-950/70 backdrop-blur-sm"></div>
+    <div class="relative flex min-h-full items-center justify-center p-4 sm:p-6">
+      <div class="relative w-full max-w-6xl overflow-hidden rounded-[2rem] bg-white shadow-2xl">
+        <div class="border-b border-slate-200 px-6 py-5 sm:px-8">
+          <div class="flex flex-wrap items-start justify-between gap-4">
+            <div class="max-w-3xl">
+              <p class="text-sm font-semibold uppercase tracking-[0.25em] text-brand-700">Mapa Interativo</p>
+              <h2 id="mapModalTitle" class="mt-2 text-2xl font-black text-ink sm:text-3xl">Municípios do Espírito Santo</h2>
+              <p id="mapModalDescription" class="mt-3 text-sm leading-6 text-slate-600">
+                O mapa mantém os municípios em branco e aplica cor apenas ao município destacado.
+              </p>
+            </div>
+            <button
+              id="closeMapModalButton"
+              type="button"
+              class="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+            >
+              Fechar
+            </button>
+          </div>
+        </div>
+
+        <div class="px-6 py-6 sm:px-8">
+          <p id="mapStatusMessage" class="text-sm font-medium text-slate-500">
+            O mapa será carregado sob demanda.
+          </p>
+          <div class="mt-4 grid gap-4 rounded-3xl border border-slate-200 bg-slate-50 p-4 lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-end">
+            <div>
+              <label for="mapMunicipalitySearch" class="block text-sm font-semibold text-ink">Pesquisar município no mapa</label>
+              <input
+                id="mapMunicipalitySearch"
+                list="municipalityOptions"
+                type="search"
+                placeholder="Ex.: Vila Velha"
+                autocomplete="off"
+                class="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-5 py-4 text-base text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-100"
+              >
+              <p class="mt-2 text-sm text-slate-500">Ao pesquisar ou clicar em um município, só ele recebe destaque no mapa.</p>
+            </div>
+            <div>
+              <p class="text-sm font-semibold text-ink">Tema do mapa</p>
+              <div class="mt-2 inline-flex rounded-full border border-slate-200 bg-white p-1">
+                <button id="mapModeBeds" type="button" class="rounded-full px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">Leitos</button>
+                <button id="mapModeVaccination" type="button" class="rounded-full px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">Vacinação</button>
+              </div>
+            </div>
+            <button
+              id="clearMapHighlightButton"
+              type="button"
+              class="rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-100"
+            >
+              Limpar destaque
+            </button>
+          </div>
+          <div id="mapLegend" class="mt-4 flex flex-wrap gap-3 text-xs font-semibold text-slate-600"></div>
+          <div class="mt-4 overflow-hidden rounded-3xl border border-slate-200 bg-slate-100">
+            <div id="municipalityLeafletMap" class="h-[70vh] max-h-[44rem] w-full"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div
+    id="conclusionsModal"
+    class="fixed inset-0 z-50 hidden"
+    role="dialog"
+    aria-modal="true"
+    aria-hidden="true"
+    aria-labelledby="conclusionsModalTitle"
+  >
+    <div id="conclusionsModalBackdrop" class="absolute inset-0 bg-slate-950/70 backdrop-blur-sm"></div>
+    <div class="relative flex min-h-full items-center justify-center p-4 sm:p-6">
+      <div class="relative flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-[2rem] bg-white shadow-2xl">
+        <div class="border-b border-slate-200 px-6 py-5 sm:px-8">
+          <div class="flex flex-wrap items-start justify-between gap-4">
+            <div class="max-w-3xl">
+              <p class="text-sm font-semibold uppercase tracking-[0.25em] text-brand-700">Conclusões do Desenvolvimento</p>
+              <h2 id="conclusionsModalTitle" class="mt-2 text-2xl font-black text-ink sm:text-3xl">Síntese da atividade e interpretação dos datasets</h2>
+              <p class="mt-3 text-sm leading-6 text-slate-600">
+                Leitura resumida da exploração dos dados, das tendências observadas e das decisões de design e informação para o site.
+              </p>
+            </div>
+            <button
+              id="closeConclusionsModalButton"
+              type="button"
+              class="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+            >
+              Fechar
+            </button>
+          </div>
+        </div>
+
+        <div class="overflow-y-auto px-6 py-6 sm:px-8">
+          <section class="rounded-3xl bg-slate-50 p-6 shadow-soft">
+            <p class="text-xs font-semibold uppercase tracking-[0.25em] text-brand-700">Equipe</p>
+            <p class="mt-3 text-base leading-7 text-slate-700">
+              <strong>Integrantes:</strong> Murilo Geaquinto, Rafael Rubim e Pedro Paris.
+            </p>
+          </section>
+
+          <section class="mt-6 grid gap-6 lg:grid-cols-2">
+            <article class="rounded-3xl bg-white p-6 shadow-soft">
+              <p class="text-xs font-semibold uppercase tracking-[0.25em] text-brand-700">Parte 1</p>
+              <h3 class="mt-3 text-2xl font-black text-ink">Exploração dos dados</h3>
+              <div class="mt-6 space-y-5 text-sm leading-7 text-slate-600">
+                <div>
+                  <h4 class="text-base font-bold text-ink">1. Quantos registros existem em cada dataset?</h4>
+                  <ul class="mt-2 list-disc space-y-1 pl-5">
+                    <li><strong>Dataset 1:</strong> 78 municípios, com 13 campos por registro.</li>
+                    <li><strong>Dataset 2:</strong> 78 municípios, com 10 campos por registro.</li>
+                  </ul>
+                </div>
+                <div>
+                  <h4 class="text-base font-bold text-ink">2. Quais são os campos disponíveis?</h4>
+                  <p class="mt-2"><strong>Dataset 1:</strong> Município, Região de Saúde, População, BCG (%), anos de 2019 a 2022 para coberturas, e Meta (%).</p>
+                  <p class="mt-2"><strong>Dataset 2:</strong> Município, Região de Saúde, População (2022), Leitos SUS (2019, 2021 e 2023), Leitos Não SUS (2023), Total Leitos (2023), Leitos/Mil Hab (2023) e Referência OMS.</p>
+                </div>
+                <div>
+                  <h4 class="text-base font-bold text-ink">3. Existem dados faltantes ou inconsistentes?</h4>
+                  <p class="mt-2">Segundo o texto-base, os datasets finais já vieram com preenchimentos e correções, ainda que algumas situações continuem exigindo atenção interpretativa.</p>
+                </div>
+              </div>
+            </article>
+
+            <article class="rounded-3xl bg-white p-6 shadow-soft">
+              <p class="text-xs font-semibold uppercase tracking-[0.25em] text-brand-700">Parte 2</p>
+              <h3 class="mt-3 text-2xl font-black text-ink">Interpretação</h3>
+              <div class="mt-6 space-y-5 text-sm leading-7 text-slate-600">
+                <div>
+                  <h4 class="text-base font-bold text-ink">4. Qual informação é mais relevante em cada dataset?</h4>
+                  <ul class="mt-2 list-disc space-y-1 pl-5">
+                    <li><strong>Dataset 1:</strong> os dados de 2022, por serem os mais recentes.</li>
+                    <li><strong>Dataset 2:</strong> os dados de 2023, com foco em leitos por mil habitantes.</li>
+                  </ul>
+                </div>
+                <div>
+                  <h4 class="text-base font-bold text-ink">6. Existe alguma informação que pode confundir o usuário?</h4>
+                  <ul class="mt-2 list-disc space-y-1 pl-5">
+                    <li>A diferença entre <strong>leitos SUS</strong> e <strong>não SUS</strong> pode não ser intuitiva.</li>
+                    <li>A comparação direta entre 2019 e 2023 pode induzir interpretações incompletas sem contexto regional.</li>
+                    <li>Municípios com baixa oferta própria podem depender da rede regional, o que precisa ser explicado no site.</li>
+                  </ul>
+                </div>
+              </div>
+            </article>
+          </section>
+
+          <section class="mt-6 rounded-3xl bg-white p-6 shadow-soft">
+            <p class="text-xs font-semibold uppercase tracking-[0.25em] text-brand-700">Dataset 1</p>
+            <h3 class="mt-3 text-2xl font-black text-ink">Principais tendências de vacinação</h3>
+            <div class="mt-6 grid gap-4 md:grid-cols-2">
+              <article class="rounded-2xl bg-slate-50 p-5">
+                <h4 class="text-base font-bold text-ink">Queda durante a pandemia</h4>
+                <p class="mt-2 text-sm leading-6 text-slate-600">
+                  O texto destaca uma queda acentuada em 2021, com exemplos como Baixo Guandu, Ecoporanga, Iconha, João Neiva e Vila Pavão.
+                </p>
+              </article>
+              <article class="rounded-2xl bg-slate-50 p-5">
+                <h4 class="text-base font-bold text-ink">Cobertura criticamente baixa em 2022</h4>
+                <p class="mt-2 text-sm leading-6 text-slate-600">
+                  Foram destacados municípios ainda abaixo de 70% em 2022, como Ecoporanga, Mantenópolis, Irupi, Marataízes, Pancas e Itapemirim.
+                </p>
+              </article>
+              <article class="rounded-2xl bg-slate-50 p-5">
+                <h4 class="text-base font-bold text-ink">Municípios que não atingiram a meta</h4>
+                <p class="mt-2 text-sm leading-6 text-slate-600">
+                  Apiacá, Barra de São Francisco e Mimoso do Sul aparecem como exemplos de municípios que, segundo o texto, nunca alcançaram 95%.
+                </p>
+              </article>
+              <article class="rounded-2xl bg-slate-50 p-5">
+                <h4 class="text-base font-bold text-ink">Possíveis inconsistências e recuperação parcial</h4>
+                <p class="mt-2 text-sm leading-6 text-slate-600">
+                  Também foram citados valores acima de 100% e uma recuperação em 2022 em municípios como Aracruz, Cachoeiro de Itapemirim e Vitória.
+                </p>
+              </article>
+            </div>
+            <div class="mt-6 rounded-2xl border border-brand-100 bg-brand-50 p-5 text-sm leading-7 text-slate-700">
+              <strong class="text-ink">Conclusão do dataset 1:</strong> há uma tendência clara de queda durante a pandemia e recuperação parcial em 2022, mas muitos municípios seguem abaixo da meta de 95%.
+            </div>
+          </section>
+
+          <section class="mt-6 rounded-3xl bg-white p-6 shadow-soft">
+            <p class="text-xs font-semibold uppercase tracking-[0.25em] text-brand-700">Dataset 2</p>
+            <h3 class="mt-3 text-2xl font-black text-ink">Principais tendências sobre leitos</h3>
+            <div class="mt-6 grid gap-4 md:grid-cols-2">
+              <article class="rounded-2xl bg-slate-50 p-5">
+                <h4 class="text-base font-bold text-ink">Queda de leitos SUS</h4>
+                <p class="mt-2 text-sm leading-6 text-slate-600">
+                  O texto aponta quedas fortes em municípios como Cachoeiro de Itapemirim, Colatina, Linhares e Cariacica.
+                </p>
+              </article>
+              <article class="rounded-2xl bg-slate-50 p-5">
+                <h4 class="text-base font-bold text-ink">Municípios sem leitos em 2023</h4>
+                <p class="mt-2 text-sm leading-6 text-slate-600">
+                  Alfredo Chaves, Ibitirama, Mantenópolis e São Roque do Canaã foram destacados como totalmente dependentes de outros municípios.
+                </p>
+              </article>
+              <article class="rounded-2xl bg-slate-50 p-5">
+                <h4 class="text-base font-bold text-ink">Taxas muito abaixo da referência OMS</h4>
+                <p class="mt-2 text-sm leading-6 text-slate-600">
+                  Linhares, Cariacica, Sooretama, São Domingos do Norte e Ponto Belo foram citados como casos críticos de leitos por mil habitantes.
+                </p>
+              </article>
+              <article class="rounded-2xl bg-slate-50 p-5">
+                <h4 class="text-base font-bold text-ink">Concentração regional e inconsistências</h4>
+                <p class="mt-2 text-sm leading-6 text-slate-600">
+                  O texto ressalta a centralização de leitos na Região Metropolitana e chama atenção para possíveis erros em registros de Marechal Floriano e Nova Venécia.
+                </p>
+              </article>
+            </div>
+            <div class="mt-6 rounded-2xl border border-brand-100 bg-brand-50 p-5 text-sm leading-7 text-slate-700">
+              <strong class="text-ink">Conclusão do dataset 2:</strong> a oferta de leitos SUS aparece concentrada em poucos municípios, enquanto várias cidades exibem cobertura muito abaixo do recomendado.
+            </div>
+          </section>
+
+          <section class="mt-6 rounded-3xl bg-white p-6 shadow-soft">
+            <p class="text-xs font-semibold uppercase tracking-[0.25em] text-brand-700">Parte 3</p>
+            <h3 class="mt-3 text-2xl font-black text-ink">Tomada de decisão para a página</h3>
+            <div class="mt-6 grid gap-6 lg:grid-cols-2">
+              <div>
+                <h4 class="text-base font-bold text-ink">7. O que deve aparecer na página?</h4>
+                <ul class="mt-3 list-disc space-y-1 pl-5 text-sm leading-7 text-slate-600">
+                  <li>Ano de referência dos dados.</li>
+                  <li>Definição clara de leitos SUS e não SUS.</li>
+                  <li>Leitos totais por região de saúde.</li>
+                  <li>Cobertura vacinal por ano.</li>
+                  <li>Fontes dos dados.</li>
+                  <li>Notas explicativas para inconsistências relevantes.</li>
+                </ul>
+              </div>
+              <div>
+                <h4 class="text-base font-bold text-ink">8. O que deve ser destacado?</h4>
+                <ul class="mt-3 list-disc space-y-1 pl-5 text-sm leading-7 text-slate-600">
+                  <li>Municípios sem nenhum leito.</li>
+                  <li>Municípios que atingem ou superam a meta da OMS.</li>
+                  <li>Municípios com recuperação vacinal em 2022.</li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="mt-6 overflow-hidden rounded-3xl border border-slate-200">
+              <table class="min-w-full divide-y divide-slate-200 text-sm">
+                <thead class="bg-slate-50">
+                  <tr>
+                    <th class="px-4 py-3 text-left font-semibold text-slate-700">Problema</th>
+                    <th class="px-4 py-3 text-left font-semibold text-slate-700">Exemplos</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200 bg-white text-slate-600">
+                  <tr>
+                    <td class="px-4 py-3">Zero leitos (SUS e não SUS)</td>
+                    <td class="px-4 py-3">Alfredo Chaves, Ibitirama, Mantenópolis, São Roque do Canaã</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3">Queda brutal de leitos SUS (2019–2023)</td>
+                    <td class="px-4 py-3">Cachoeiro, Colatina, Linhares</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3">Leitos por mil habitantes muito abaixo de 3</td>
+                    <td class="px-4 py-3">Linhares, Cariacica, Sooretama</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3">Cobertura vacinal abaixo de 70% em 2022</td>
+                    <td class="px-4 py-3">Ecoporanga, Mantenópolis, Itapemirim</td>
+                  </tr>
+                  <tr>
+                    <td class="px-4 py-3">Município sem leito SUS próprio</td>
+                    <td class="px-4 py-3">Cariacica</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="mt-6 grid gap-6 lg:grid-cols-2">
+              <div>
+                <h4 class="text-base font-bold text-ink">9. O que deve ser omitido?</h4>
+                <p class="mt-3 text-sm leading-7 text-slate-600">
+                  Comparações diretas entre 2019 e 2023 sem nota explicativa, para evitar conclusões simplificadas sobre mudanças que podem ser regionais ou metodológicas.
+                </p>
+              </div>
+              <div>
+                <h4 class="text-base font-bold text-ink">10. Quem seria o usuário dessa página?</h4>
+                <ul class="mt-3 list-disc space-y-1 pl-5 text-sm leading-7 text-slate-600">
+                  <li>Gestor ou profissional de saúde pública.</li>
+                  <li>Jornalista ou pesquisador.</li>
+                  <li>Cidadão comum.</li>
+                  <li>Órgão de controle ou Ministério Público.</li>
+                </ul>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="bg-ink">
+    <div class="mx-auto flex max-w-7xl flex-col gap-4 px-6 py-8 text-sm text-slate-300 lg:flex-row lg:items-center lg:justify-between lg:px-8">
+      <p>Painel demonstrativo com dados de leitos hospitalares e cobertura vacinal dos municípios do Espírito Santo.</p>
+      <p><strong class="text-white">Nomes dos Integrantes:</strong> Rafael Rubim Moraes, Pedro Henrique Resende Paris e Murilo Geaquinto Ferri Fernandes</p>
+    </div>
+  </footer>
+
+  <script>
+    const bedsCsv = `Municipio,Regiao,Populacao,Leitos_SUS_2019,Leitos_SUS_2021,Leitos_SUS_2023,Leitos_Nao_SUS_2023,Total_2023,Leitos_Mil_2023,Meta
+Afonso Cláudio,Metropolitana,30.603,44,46,45,19,64,"2,09",3
+Água Doce do Norte,Central Norte,12.402,10,11,11,1,12,"0,97",3
+Águia Branca,Central Norte,9.714,7,7,10,1,11,"1,13",3
+Alegre,Sul,31.403,38,37,35,7,42,"1,34",3
+Alfredo Chaves,Sul,13.836,0,0,0,0,0,0,3
+Alto Rio Novo,Central Norte,7.831,7,7,6,0,6,"0,77",3
+Anchieta,Sul,26.703,29,29,28,5,33,"1,24",3
+Apiacá,Sul,8.203,9,7,7,2,9,"1,1",3
+Aracruz,Metropolitana,108.416,166,160,159,69,228,"2,1",3
+Atílio Vivácqua,Sul,12.060,10,10,11,0,11,"0,91",3
+Baixo Guandu,Central Norte,29.803,28,23,27,5,32,"1,07",3
+Barra de São Francisco,Central Norte,42.498,61,61,61,0,61,"1,44",3
+Boa Esperança,Central Norte,19.203,17,16,17,1,18,"0,94",3
+Bom Jesus do Norte,Sul,9.803,10,9,10,3,13,"1,33",3
+Brejetuba,Metropolitana,12.987,17,21,20,9,29,"2,23",3
+Cachoeiro de Itapemirim,Sul,185.784,354,482,20,9,29,"2,23",3
+Cariacica,Metropolitana,406.542,618,600,0,264,264,"0,65",3
+Castelo,Sul,37.803,45,44,40,9,49,"1,3",3
+Colatina,Central Norte,119.992,336,356,40,9,49,"1,3",3
+Conceição da Barra,Central Norte,45.280,40,40,39,5,44,"0,97",3
+Conceição do Castelo,Metropolitana,17.482,26,23,26,10,36,"2,06",3
+Divino de São Lourenço,Sul,5.803,7,5,7,1,8,"1,38",3
+Domingos Martins,Metropolitana,33.551,93,95,95,7,102,"1,38",3
+Dores do Rio Preto,Sul,7.803,8,10,6,0,6,"0,77",3
+Ecoporanga,Central Norte,25.314,23,19,21,4,25,"0,99",3
+Fundão,Metropolitana,21.194,11,11,21,4,25,"0,99",3
+Governador Lindenberg,Central Norte,11.620,9,10,11,0,11,"0,95",3
+Guaçuí,Sul,24.603,26,25,26,7,33,"1,34",3
+Guarapari,Metropolitana,124.656,59,59,58,12,70,"1,342",3
+Ibatiba,Metropolitana,21.304,30,32,29,14,43,"2,02",3
+Ibiraçu,Metropolitana,12.890,21,20,19,9,28,"2,17",3
+Ibitirama,Sul,9.550,0,0,0,0,0,0,3
+Iconha,Sul,13.803,13,14,13,4,17,"1,23",3
+Irupi,Sul,12.403,13,13,14,2,16,"1,29",3
+Itaguaçu,Metropolitana,14.320,20,23,21,9,30,"2,09",3
+Itapemirim,Sul,34.493,120,84,14,2,16,"1,29",3
+Itarana,Metropolitana,11.018,18,14,13,7,20,"1,82",3
+Iúna,Sul,23.403,25,24,24,6,30,"1,28",3
+Jaguaré,Central Norte,27.503,25,23,24,3,27,"0,98",3
+Jerônimo Monteiro,Sul,11.803,13,15,12,3,15,"1,27",3
+João Neiva,Metropolitana,16.187,32,33,24,3,27,"0,98",3
+Laranja da Terra,Metropolitana,11.640,16,15,16,8,24,"2,06",3
+Linhares,Central Norte,166.786,154,268,33,18,51,"0,31",3
+Mantenópolis,Central Norte,12.259,0,0,0,0,0,0,3
+Marataízes,Sul,39.203,45,45,42,10,52,"1,33",3
+Marechal Floriano,Metropolitana,16.214,154,23,22,11,33,"2,04",3
+Marilândia,Central Norte,11.402,10,10,7,1,8,"0,7",3
+Mimoso do Sul,Sul,26.803,31,30,31,6,37,"1,38",3
+Montanha,Central Norte,19.128,32,32,22,11,33,"2,04",3
+Mucurici,Central Norte,7.803,7,5,8,0,8,"1,03",3
+Muniz Freire,Sul,17.351,34,30,31,6,37,"1,38",3
+Muqui,Sul,14.603,14,16,15,2,17,"1,16",3
+Nova Venécia,Central Norte,47.214,7,39,42,6,48,"1,02",3
+Pancas,Central Norte,22.814,20,19,19,3,22,"0,96",3
+Pedro Canário,Central Norte,26.503,23,23,21,3,24,"0,91",3
+Pinheiros,Central Norte,24.803,22,20,19,2,21,"0,85",3
+Piúma,Sul,24.603,30,28,28,6,34,"1,38",3
+Ponto Belo,Central Norte,8.904,8,7,6,1,7,"0,79",3
+Presidente Kennedy,Sul,11.203,14,11,14,1,15,"1,34",3
+Rio Bananal,Central Norte,18.519,26,26,28,31,34,"1,38",3
+Rio Novo do Sul,Sul,12.603,16,15,15,4,19,"1,51",3
+Santa Leopoldina,Metropolitana,13.076,21,18,25,7,32,"2,45",3
+Santa Maria de Jetibá,Metropolitana,40.242,63,57,59,26,85,"2,11",3
+Santa Teresa,Metropolitana,24.390,38,38,35,15,50,"2,05",3
+São Domingos do Norte,Central Norte,9.203,9,6,7,0,7,"0,76",3
+São Gabriel da Palha,Central Norte,38.014,32,30,30,4,34,"0,89",3
+São José do Calçado,Sul,10.203,12,12,10,3,13,"1,27",3
+São Mateus,Central Norte,131.491,117,115,111,20,131,1,3
+São Roque do Canaã,Central Norte,10.886,0,0,0,0,0,0,3
+Serra,Metropolitana,529.583,805,781,765,343,1108,"2,09",3
+Sooretama,Central Norte,26.503,22,23,17,0,17,"0,64",3
+Vargem Alta,Sul,17.803,18,18,21,5,26,"1,46",3
+Venda Nova do Imigrante,Metropolitana,25.330,61,64,69,15,84,"3,32",3
+Viana,Metropolitana,79.010,121,118,115,51,166,"2,1",3
+Vila Pavão,Central Norte,9.403,8,7,9,0,9,"0,96",3
+Vila Valério,Central Norte,13.728,0,0,0,0,0,0,3
+Vila Velha,Metropolitana,506.395,771,750,734,330,1064,"2,1",3
+Vitória,Metropolitana,358.267,1214,1088,1186,651,1837,"5,13",3`;
+
+    const vaccinationCsv = `Municipio,Regiao,Populacao,BCG_2022,Polio_2019,Polio_2020,Polio_2021,Polio_2022,Triplice_2019,Triplice_2020,Triplice_2021,Triplice_2022,Meta
+Afonso Cláudio,Metropolitana,30.603,"95,9","91,4","72,8","73,3","73,7","98,9","80,2","78,5","87,4","95,0"
+Água Doce do Norte,Central Norte,12.402,"88,4","91,0","69,9","70,8","54,3","85,9","77,7","72,8","81,6","95,0"
+Águia Branca,Central Norte,9.714,"79,1","92,6","81,1","64,7","64,0","81,9","81,9","74,9","84,9","95,0"
+Alegre,Sul,31.403,"97,5","87,3","87,3","74,5","56,8","95,6","81,6","83,8","82,6","95,0"
+Alfredo Chaves,Sul,13.836,"65,9","108,0","113,8","76,8","134,1","112,3","124,6","80,0","74,6","95,0"
+Alto Rio Novo,Central Norte,7.831,"87,6","83,5","69,3","68,2","72,8","87,2","82,2","82,2","81,1","95,0"
+Anchieta,Sul,26.703,"89,1","107,1","75,0","81,4","62,9","94,7","77,7","71,6","90,8","95,0"
+Apiacá,Sul,8.203,"85,8","87,5","73,2","77,5","60,7","92,8","75,2","71,0","77,7","95,0"
+Aracruz,Metropolitana,108.416,"90,6","100,9","85,9","71,6","74,1","90,3","83,3","74,7","90,9","95,0"
+Atílio Vivácqua,Sul,10.540,"67,1","111,4","95,0","98,7","84,2","100,7","114,3","97,3","98,0","95,0"
+Baixo Guandu,Central Norte,29.803,"97,0","97,5","83,2","78,8","63,3","91,4","86,0","85,5","85,9","95,0"
+Barra de São Francisco,Central Norte,42.498,"56,2","84,3","63,9","92,5","71,4","93,2","65,7","84,2","74,4","95,0"
+Boa Esperança,Central Norte,19.203,"84,7","82,6","72,4","75,2","59,4","88,1","67,8","82,5","82,5","95,0"
+Bom Jesus do Norte,Sul,9.803,"83,3","97,0","82,0","65,8","60,6","91,0","81,1","78,0","85,9","95,0"
+Brejetuba,Metropolitana,12.987,"91,7","86,9","70,7","63,0","60,1","85,6","80,9","82,4","85,3","95,0"
+Cachoeiro de Itapemirim,Sul,185.786,"72,1","93,4","78,2","73,2","77,5","94,2","88,2","77,4","77,5","95,0"
+Cariacica,Metropolitana,406.542,"93,2","91,4","79,5","81,0","71,1","92,8","85,8","83,5","82,6","95,0"
+Castelo,Sul,37.803,"88,0","88,5","79,8","83,1","75,2","99,1","77,9","84,3","142,3","95,0"
+Colatina,Central Norte,120.033,"56,3","59,2","23,9","53,0","44,8","91,2","24,0","60,7","43,6","95,0"
+Conceição da Barra,Central Norte,45.280,"94,7","98,9","77,9","76,1","68,2","96,0","83,7","81,1","84,3","95,0"
+Conceição do Castelo,Metropolitana,17.482,"90,6","97,5","81,7","64,3","53,6","82,3","70,9","83,7","84,8","95,0"
+Divino de São Lourenço,Sul,5.803,"92,9","90,7","70,6","64,7","70,3","87,0","79,7","72,4","81,2","95,0"
+Domingos Martins,Metropolitana,35.416,"60,7","98,9","107,9","90,9","77,1","101,9","117,9","99,2","87,7","95,0"
+Dores do Rio Preto,Sul,7.803,"73,1","95,9","82,8","75,4","60,8","89,3","78,4","73,9","79,8","95,0"
+Ecoporanga,Central Norte,25.314,"93,6","98,8","83,0","69,3","73,9","99,2","79,0","81,4","91,8","95,0"
+Fundão,Metropolitana,18.014,"55,9","96,6","44,8","34,5","79,5","110,1","49,6","34,1","78,3","95,0"
+Governador Lindenberg,Central Norte,11.620,"80,7","97,2","76,7","80,9","63,4","83,1","79,9","69,3","85,1","95,0"
+Guaçuí,Sul,24.603,"85,0","96,2","75,3","66,2","62,0","88,9","71,2","86,1","85,6","95,0"
+Guarapari,Metropolitana,124.656,"56,7","84,4","65,6","58,0","73,1","96,6","70,9","62,2","79,3","95,0"
+Ibatiba,Metropolitana,21.304,"91,1","93,5","80,4","71,2","72,4","86,0","82,7","75,1","83,1","95,0"
+Ibiraçu,Metropolitana,12.890,"88,1","85,9","110,7","64,2","71,4","92,3","68,7","73,8","88,8","95,0"
+Ibitirama,Sul,9.520,"71,4","95,2","53,3","24,1","61,8","104,8","57,6","29,2","64,6","95,0"
+Iconha,Sul,13.803,"85,6","93,4","69,2","65,2","55,7","89,1","66,1","76,3","81,8","95,0"
+Irupi,Sul,12.403,"86,7","94,0","71,3","73,9","72,4","83,7","79,5","82,4","87,0","95,0"
+Itaguaçu,Metropolitana,14.320,"91,7","86,4","80,4","65,5","65,8","88,8","82,3","71,8","88,3","95,0"
+Itapemirim,Sul,39.832,"61,8","86,3","83,5","36,9","66,1","98,9","83,2","32,9","68,8","95,0"
+Itarana,Metropolitana,11.018,"93,1","94,0","85,0","73,1","67,6","89,9","81,6","82,2","79,2","95,0"
+Iúna,Sul,23.403,"84,5","88,0","78,4","70,5","67,4","93,4","69,1","86,6","82,4","95,0"
+Jaguaré,Central Norte,27.503,"96,2","89,9","80,4","71,2","65,5","96,4","69,4","74,0","89,0","95,0"
+Jerônimo Monteiro,Sul,11.803,"91,3","92,1","81,6","80,3","60,5","85,2","69,6","70,6","85,4","95,0"
+João Neiva,Central Norte,14.079,"50,0","93,3","76,8","113,5","75,0","94,8","71,1","104,1","79,8","95,0"
+Laranja da Terra,Metropolitana,11.640,"84,0","96,5","80,4","70,5","67,3","144,3","68,7","74,6","77,9","95,0"
+Linhares,Central Norte,166.786,"18,4","65,5","73,1","61,5","83,0","73,3","75,5","64,8","86,0","95,0"
+Mantenópolis,Central Norte,12.770,"28,7","105,2","96,6","93,3","50,8","104,6","92,5","109,8","70,2","95,0"
+Marataízes,Sul,39.203,"93,1","89,5","85,6","67,7","55,7","98,4","83,8","73,5","92,3","95,0"
+Marechal Floriano,Metropolitana,16.214,"94,5","82,5","83,0","66,2","68,3","83,5","82,3","68,7","82,0","95,0"
+Marilândia,Central Norte,11.402,"90,9","88,6","70,1","67,1","61,7","88,1","76,6","74,1","79,2","95,0"
+Mimoso do Sul,Sul,26.803,"86,7","93,1","83,3","67,8","67,9","97,9","71,8","79,0","91,6","95,0"
+Montanha,Central Norte,18.900,"87,8","91,1","101,8","95,9","137,4","100,4","104,1","106,7","111,9","95,0"
+Mucurici,Central Norte,7.803,"83,8","85,9","70,2","72,2","69,0","94,3","80,9","69,4","80,2","95,0"
+Muniz Freire,Sul,18.153,"89,6","94,6","105,8","82,6","94,2","100,8","110,8","96,6","87,9","95,0"
+Muqui,Sul,14.603,"89,4","92,8","74,3","73,0","57,8","86,0","75,7","76,1","78,4","95,0"
+Nova Venécia,Central Norte,47.214,"84,5","100,4","78,2","71,6","74,2","94,5","72,0","85,8","88,9","95,0"
+Pancas,Central Norte,22.814,"85,1","93,8","73,9","72,5","58,8","90,7","81,3","79,9","83,2","95,0"
+Pedro Canário,Central Norte,26.503,"87,8","100,6","76,8","68,5","57,2","97,3","69,0","86,4","91,5","95,0"
+Pinheiros,Central Norte,24.803,"90,4","87,8","71,7","66,5","59,9","90,0","73,3","86,4","88,6","95,0"
+Piúma,Sul,24.603,"93,4","95,8","71,8","81,2","70,2","92,2","78,8","77,4","87,5","95,0"
+Ponto Belo,Central Norte,8.904,"84,4","86,7","73,3","65,0","63,6","82,4","66,1","72,4","84,7","95,0"
+Presidente Kennedy,Sul,11.203,"82,3","86,4","78,4","66,7","66,3","88,8","76,4","72,3","86,6","95,0"
+Rio Bananal,Central Norte,19.274,"56,6","114,4","154,0","88,1","102,2","123,8","174,3","116,0","94,2","95,0"
+Rio Novo do Sul,Sul,12.603,"83,9","81,8","76,0","79,9","89,2","87,6","79,8","80,2","83,4","95,0"
+Santa Leopoldina,Metropolitana,13.076,"91,0","92,6","83,7","78,5","71,3","87,0","69,3","77,6","80,6","95,0"
+Santa Maria de Jetibá,Metropolitana,40.242,"93,6","90,7","81,1","78,5","56,6","86,4","71,0","77,9","85,9","95,0"
+Santa Teresa,Metropolitana,24.390,"96,0","94,7","70,7","68,2","62,1","88,1","80,2","73,1","92,8","95,0"
+São Domingos do Norte,Central Norte,9.203,"92,7","82,1","78,0","64,2","62,4","83,3","70,8","75,9","87,4","95,0"
+São Gabriel da Palha,Central Norte,38.014,"95,6","93,3","85,3","70,5","60,7","87,8","73,8","74,4","87,0","95,0"
+São José do Calçado,Sul,10.203,"90,9","85,2","73,5","72,2","57,5","87,5","68,1","68,1","84,6","95,0"
+São Mateus,Central Norte,131.491,"89,6","96,5","73,5","75,1","65,5","88,6","70,4","86,9","83,7","95,0"
+São Roque do Canaã,Central Norte,10.886,"73,6","118,9","117,9","106,4","111,1","117,9","148,4","125,7","93,5","95,0"
+Serra,Metropolitana,529.583,"87,0","101,3","75,3","69,9","72,5","91,1","73,5","79,6","86,3","95,0"
+Sooretama,Central Norte,26.503,"94,5","92,0","81,8","67,4","74,6","89,5","84,0","83,0","89,9","95,0"
+Vargem Alta,Sul,17.803,"85,1","84,6","69,8","67,6","59,2","93,0","77,7","71,2","84,7","95,0"
+Venda Nova do Imigrante,Sul,23.831,"82,6","96,6","108,8","92,8","103,6","108,2","120,7","97,8","97,3","95,0"
+Viana,Metropolitana,79.010,"89,3","102,7","75,9","74,8","67,1","93,3","87,7","80,7","90,0","95,0"
+Vila Pavão,Central Norte,9.403,"87,9","83,6","79,8","75,4","64,0","90,9","69,7","71,5","86,9","95,0"
+Vila Valério,Central Norte,13.728,"59,5","102,5","97,5","100,4","74,4","97,5","110,7","103,1","81,1","95,0"
+Vila Velha,Metropolitana,506.395,"86,4","94,0","80,6","70,4","64,0","89,6","79,6","85,8","86,3","95,0"
+Vitória,Metropolitana,322.869,"55,1","91,0","81,0","78,1","77,5","95,6","81,4","82,8","74,6","95,0"`;
+
+    const charts = {};
+    const mapState = {
+      mode: "beds",
+      selectedKey: "",
+      hoveredKey: "",
+      leafletPromise: null,
+      geoJsonPromise: null,
+      map: null,
+      layer: null,
+      layersByKey: new Map()
+    };
+
+    function parseCsv(text) {
+      const rows = [];
+      let current = "";
+      let row = [];
+      let insideQuotes = false;
+
+      for (let index = 0; index < text.length; index += 1) {
+        const character = text[index];
+        const nextCharacter = text[index + 1];
+
+        if (character === "\"") {
+          if (insideQuotes && nextCharacter === "\"") {
+            current += "\"";
+            index += 1;
+          } else {
+            insideQuotes = !insideQuotes;
+          }
+          continue;
+        }
+
+        if (character === "," && !insideQuotes) {
+          row.push(current);
+          current = "";
+          continue;
+        }
+
+        if ((character === "\n" || character === "\r") && !insideQuotes) {
+          if (character === "\r" && nextCharacter === "\n") {
+            index += 1;
+          }
+          row.push(current);
+          current = "";
+          if (row.some((cell) => cell !== "")) {
+            rows.push(row);
+          }
+          row = [];
+          continue;
+        }
+
+        current += character;
+      }
+
+      if (current.length > 0 || row.length > 0) {
+        row.push(current);
+        if (row.some((cell) => cell !== "")) {
+          rows.push(row);
+        }
+      }
+
+      return rows;
+    }
+
+    const formatNumber = (value) => new Intl.NumberFormat("pt-BR").format(value);
+    const formatPercent = (value) => new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(value);
+    const formatDecimal = (value) => new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
+    const normalizeText = (value) => String(value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+    const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (character) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      "\"": "&quot;",
+      "'": "&#39;"
+    }[character]));
+
+    function toIntBr(value) {
+      return Number.parseInt(String(value ?? "").replace(/\./g, "").trim() || "0", 10);
+    }
+
+    function toFloatBr(value) {
+      const sanitized = String(value ?? "").replace(/\./g, "").replace(",", ".").trim();
+      return Number.parseFloat(sanitized || "0");
+    }
+
+    const bedsData = parseCsv(bedsCsv).slice(1).map((row) => {
+      const population = toIntBr(row[2]);
+      const susBeds2023 = toIntBr(row[5]);
+      const nonSusBeds2023 = toIntBr(row[6]);
+      const totalBeds = toIntBr(row[7]);
+      const reportedBedsPer1000 = toFloatBr(row[8]);
+      const calculatedBedsPer1000 = population ? Number(((totalBeds / population) * 1000).toFixed(2)) : 0;
+      let qualityFlag = "ok";
+
+      if (totalBeds === 0) {
+        qualityFlag = "zero_reported";
+      } else if (Math.abs(calculatedBedsPer1000 - reportedBedsPer1000) > 0.05) {
+        qualityFlag = "inconsistent";
+      }
+
+      return {
+        name: row[0],
+        region: row[1],
+        population,
+        susBeds2019: toIntBr(row[3]),
+        susBeds2021: toIntBr(row[4]),
+        susBeds2023,
+        nonSusBeds2023,
+        totalBeds2023: totalBeds,
+        reportedBedsPer1000,
+        bedsPer1000: calculatedBedsPer1000,
+        whoTarget: toFloatBr(row[9]),
+        qualityFlag,
+        compositionMismatch: (susBeds2023 + nonSusBeds2023) !== totalBeds
+      };
+    });
+
+    const vaccinationData = parseCsv(vaccinationCsv).slice(1).map((row) => {
+      const bcg2022 = toFloatBr(row[3]);
+      const polio2022 = toFloatBr(row[7]);
+      const triple2022 = toFloatBr(row[11]);
+      const avg2022 = Number((((bcg2022 + polio2022 + triple2022) / 3)).toFixed(2));
+      const targetHits = [bcg2022, polio2022, triple2022].filter((value) => value >= 95).length;
+
+      return {
+        name: row[0],
+        region: row[1],
+        population: toIntBr(row[2]),
+        bcg2022,
+        polio2019: toFloatBr(row[4]),
+        polio2020: toFloatBr(row[5]),
+        polio2021: toFloatBr(row[6]),
+        polio2022,
+        triple2019: toFloatBr(row[8]),
+        triple2020: toFloatBr(row[9]),
+        triple2021: toFloatBr(row[10]),
+        triple2022,
+        target: toFloatBr(row[12]),
+        avg2022,
+        targetHits
+      };
+    });
+
+    const bedsByKey = new Map(bedsData.map((row) => [normalizeText(row.name), row]));
+    const vaccinationByKey = new Map(vaccinationData.map((row) => [normalizeText(row.name), row]));
+    const allMunicipalities = Array.from(new Set([...bedsData, ...vaccinationData].map((row) => row.name)))
+      .sort((a, b) => a.localeCompare(b, "pt-BR"));
+
+    function getBedsStatus(city) {
+      if (!city) {
+        return {
+          label: "Sem dado",
+          badgeClass: "bg-slate-200 text-slate-700",
+          cardClass: "border-slate-200 bg-white text-slate-600",
+          color: "#94a3b8"
+        };
+      }
+
+      if (city.qualityFlag === "zero_reported" || city.bedsPer1000 === 0) {
+        return {
+          label: "Crítico",
+          badgeClass: "bg-red-100 text-red-700",
+          cardClass: "border-red-200 bg-red-50 text-red-900",
+          color: "#b91c1c"
+        };
+      }
+
+      if (city.bedsPer1000 >= 3) {
+        return {
+          label: "Adequado",
+          badgeClass: "bg-emerald-100 text-emerald-700",
+          cardClass: "border-emerald-200 bg-emerald-50 text-emerald-900",
+          color: "#047857"
+        };
+      }
+
+      if (city.bedsPer1000 >= 2) {
+        return {
+          label: city.qualityFlag === "inconsistent" ? "Ressalva" : "Atenção",
+          badgeClass: "bg-amber-100 text-amber-700",
+          cardClass: "border-amber-200 bg-amber-50 text-amber-900",
+          color: "#b45309"
+        };
+      }
+
+      return {
+        label: city.qualityFlag === "inconsistent" ? "Ressalva" : "Crítico",
+        badgeClass: "bg-red-100 text-red-700",
+        cardClass: "border-red-200 bg-red-50 text-red-900",
+        color: "#dc2626"
+      };
+    }
+
+    function getVaccinationStatus(city) {
+      if (!city) {
+        return {
+          label: "Sem dado",
+          badgeClass: "bg-slate-200 text-slate-700",
+          cardClass: "border-slate-200 bg-white text-slate-600",
+          color: "#94a3b8"
+        };
+      }
+
+      if (city.avg2022 >= 95 || city.targetHits >= 2) {
+        return {
+          label: "Melhor cenário",
+          badgeClass: "bg-emerald-100 text-emerald-700",
+          cardClass: "border-emerald-200 bg-emerald-50 text-emerald-900",
+          color: "#047857"
+        };
+      }
+
+      if (city.avg2022 >= 80 || city.targetHits >= 1) {
+        return {
+          label: "Atenção",
+          badgeClass: "bg-amber-100 text-amber-700",
+          cardClass: "border-amber-200 bg-amber-50 text-amber-900",
+          color: "#b45309"
+        };
+      }
+
+      return {
+        label: "Crítico",
+        badgeClass: "bg-red-100 text-red-700",
+        cardClass: "border-red-200 bg-red-50 text-red-900",
+        color: "#dc2626"
+      };
+    }
+
+    function buildBedsSummary() {
+      const totals = bedsData.reduce((accumulator, city) => {
+        accumulator.population += city.population;
+        accumulator.totalBeds += city.totalBeds2023;
+        accumulator.susBeds2023 += city.susBeds2023;
+        accumulator.nonSusBeds2023 += city.nonSusBeds2023;
+        accumulator.susBeds2019 += city.susBeds2019;
+        accumulator.susBeds2021 += city.susBeds2021;
+        return accumulator;
+      }, {
+        population: 0,
+        totalBeds: 0,
+        susBeds2023: 0,
+        nonSusBeds2023: 0,
+        susBeds2019: 0,
+        susBeds2021: 0
+      });
+
+      const regionsMap = bedsData.reduce((accumulator, city) => {
+        if (!accumulator[city.region]) {
+          accumulator[city.region] = {
+            region: city.region,
+            population: 0,
+            totalBeds: 0
+          };
+        }
+
+        accumulator[city.region].population += city.population;
+        accumulator[city.region].totalBeds += city.totalBeds2023;
+        return accumulator;
+      }, {});
+
+      const regions = Object.values(regionsMap)
+        .map((item) => ({
+          name: item.region,
+          bedsPer1000: Number(((item.totalBeds / item.population) * 1000).toFixed(2))
+        }))
+        .sort((a, b) => a.bedsPer1000 - b.bedsPer1000);
+
+      return {
+        municipalityCount: bedsData.length,
+        totalBeds: totals.totalBeds,
+        susBeds2023: totals.susBeds2023,
+        nonSusBeds2023: totals.nonSusBeds2023,
+        averageBedsPer1000: Number(((totals.totalBeds / totals.population) * 1000).toFixed(2)),
+        trend: {
+          "2019": Number(((totals.susBeds2019 / totals.population) * 1000).toFixed(2)),
+          "2021": Number(((totals.susBeds2021 / totals.population) * 1000).toFixed(2)),
+          "2023": Number(((totals.susBeds2023 / totals.population) * 1000).toFixed(2))
+        },
+        alertCount: bedsData.filter((city) => city.bedsPer1000 < 2 || city.qualityFlag !== "ok").length,
+        flagsCount: bedsData.filter((city) => city.qualityFlag !== "ok").length,
+        zeroCount: bedsData.filter((city) => city.qualityFlag === "zero_reported").length,
+        inconsistentCount: bedsData.filter((city) => city.qualityFlag === "inconsistent").length,
+        compositionMismatchCount: bedsData.filter((city) => city.compositionMismatch).length,
+        regions,
+        bottomMunicipalities: [...bedsData].sort((a, b) => a.bedsPer1000 - b.bedsPer1000).slice(0, 4)
+      };
+    }
+
+    function buildVaccinationSummary() {
+      const average = (values) => Number((values.reduce((sum, value) => sum + value, 0) / values.length).toFixed(2));
+      const regionsMap = vaccinationData.reduce((accumulator, city) => {
+        if (!accumulator[city.region]) {
+          accumulator[city.region] = [];
+        }
+        accumulator[city.region].push(city);
+        return accumulator;
+      }, {});
+
+      const regions = Object.entries(regionsMap)
+        .map(([name, cities]) => ({
+          name,
+          avg2022: average(cities.map((city) => city.avg2022)),
+          bcg2022: average(cities.map((city) => city.bcg2022)),
+          polio2022: average(cities.map((city) => city.polio2022)),
+          triple2022: average(cities.map((city) => city.triple2022))
+        }))
+        .sort((a, b) => a.avg2022 - b.avg2022);
+
+      return {
+        municipalityCount: vaccinationData.length,
+        avgBCG2022: average(vaccinationData.map((city) => city.bcg2022)),
+        avgPolio2022: average(vaccinationData.map((city) => city.polio2022)),
+        avgTriple2022: average(vaccinationData.map((city) => city.triple2022)),
+        avg2022: average(vaccinationData.map((city) => city.avg2022)),
+        hitsBCG: vaccinationData.filter((city) => city.bcg2022 >= 95).length,
+        hitsPolio2022: vaccinationData.filter((city) => city.polio2022 >= 95).length,
+        hitsTriple2022: vaccinationData.filter((city) => city.triple2022 >= 95).length,
+        noneHits: vaccinationData.filter((city) => city.targetHits === 0).length,
+        twoPlusHits: vaccinationData.filter((city) => city.targetHits >= 2).length,
+        regions,
+        bottomMunicipalities: [...vaccinationData].sort((a, b) => a.avg2022 - b.avg2022).slice(0, 6),
+        bottomHighlights: [...vaccinationData].sort((a, b) => a.avg2022 - b.avg2022).slice(0, 4),
+        polioTrend: {
+          "2019": average(vaccinationData.map((city) => city.polio2019)),
+          "2020": average(vaccinationData.map((city) => city.polio2020)),
+          "2021": average(vaccinationData.map((city) => city.polio2021)),
+          "2022": average(vaccinationData.map((city) => city.polio2022))
+        },
+        tripleTrend: {
+          "2019": average(vaccinationData.map((city) => city.triple2019)),
+          "2020": average(vaccinationData.map((city) => city.triple2020)),
+          "2021": average(vaccinationData.map((city) => city.triple2021)),
+          "2022": average(vaccinationData.map((city) => city.triple2022))
+        }
+      };
+    }
+
+    const bedsSummary = buildBedsSummary();
+    const vaccinationSummary = buildVaccinationSummary();
+
+    function createChart(canvasId, config) {
+      if (charts[canvasId]) {
+        charts[canvasId].destroy();
+      }
+
+      const element = document.getElementById(canvasId);
+      charts[canvasId] = new Chart(element, config);
+    }
+
+    function renderHomeSummary() {
+      document.getElementById("homeMunicipalityCount").textContent = formatNumber(bedsSummary.municipalityCount);
+      document.getElementById("homeBedsAverage").textContent = `${formatDecimal(bedsSummary.averageBedsPer1000)} leitos/1.000`;
+      document.getElementById("homeVaccinationAverage").textContent = `${formatPercent(vaccinationSummary.avg2022)}%`;
+      document.getElementById("homeCriticalRegion").textContent = bedsSummary.regions[0].name;
+    }
+
+    function renderBedsSummary() {
+      document.getElementById("bedsHeroAverage").textContent = `${formatDecimal(bedsSummary.averageBedsPer1000)} leitos/1.000`;
+      document.getElementById("bedsHeroCriticalRegion").textContent = `${bedsSummary.regions[0].name} (${formatDecimal(bedsSummary.regions[0].bedsPer1000)})`;
+      document.getElementById("bedsHeroAlertCount").textContent = formatNumber(bedsSummary.alertCount);
+      document.getElementById("bedsTotalCard").textContent = formatNumber(bedsSummary.totalBeds);
+      document.getElementById("bedsSusCard").textContent = formatNumber(bedsSummary.susBeds2023);
+      document.getElementById("bedsNonSusCard").textContent = formatNumber(bedsSummary.nonSusBeds2023);
+      document.getElementById("bedsFlagsCard").textContent = formatNumber(bedsSummary.flagsCount);
+      document.getElementById("bedsMethodFlags").textContent = formatNumber(bedsSummary.flagsCount);
+      document.getElementById("bedsMethodZeros").textContent = formatNumber(bedsSummary.zeroCount);
+      document.getElementById("bedsMethodInconsistent").textContent = formatNumber(bedsSummary.inconsistentCount);
+      document.getElementById("bedsMethodCompositionMismatch").textContent = formatNumber(bedsSummary.compositionMismatchCount);
+
+      createChart("bedsComparisonChart", {
+        type: "bar",
+        data: {
+          labels: ["Espírito Santo", "Meta OMS"],
+          datasets: [{
+            data: [bedsSummary.averageBedsPer1000, 3],
+            backgroundColor: ["#179f79", "#102a43"],
+            borderRadius: 18
+          }]
+        },
+        options: {
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { beginAtZero: true, ticks: { callback: (value) => value.toLocaleString("pt-BR") } }
+          }
+        }
+      });
+
+      createChart("bedsRegionsChart", {
+        type: "bar",
+        data: {
+          labels: bedsSummary.regions.map((region) => region.name),
+          datasets: [{
+            data: bedsSummary.regions.map((region) => region.bedsPer1000),
+            backgroundColor: ["#dc2626", "#d97706", "#179f79"],
+            borderRadius: 18
+          }]
+        },
+        options: {
+          indexAxis: "y",
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: { x: { beginAtZero: true } }
+        }
+      });
+
+      createChart("bedsTrendChart", {
+        type: "line",
+        data: {
+          labels: ["2019", "2021", "2023"],
+          datasets: [{
+            label: "Leitos SUS por mil habitantes",
+            data: [bedsSummary.trend["2019"], bedsSummary.trend["2021"], bedsSummary.trend["2023"]],
+            borderColor: "#d97706",
+            backgroundColor: "rgba(217, 119, 6, 0.15)",
+            fill: true,
+            pointRadius: 5,
+            tension: 0.32
+          }]
+        },
+        options: {
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: { y: { beginAtZero: true } }
+        }
+      });
+
+      createChart("bedsSplitChart", {
+        type: "doughnut",
+        data: {
+          labels: ["SUS", "Não SUS"],
+          datasets: [{
+            data: [bedsSummary.susBeds2023, bedsSummary.nonSusBeds2023],
+            backgroundColor: ["#179f79", "#f59e0b"],
+            borderColor: "#ffffff",
+            borderWidth: 4
+          }]
+        },
+        options: {
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: "bottom" },
+            tooltip: {
+              callbacks: {
+                label: (context) => `${context.label}: ${formatNumber(context.raw)} leitos`
+              }
+            }
+          },
+          cutout: "60%"
+        }
+      });
+
+      const highlights = document.getElementById("bedsHighlights");
+      highlights.innerHTML = "";
+      bedsSummary.bottomMunicipalities.forEach((city) => {
+        const status = getBedsStatus(city);
+        const card = document.createElement("article");
+        card.className = `rounded-3xl border p-5 shadow-soft ${status.cardClass}`;
+        card.innerHTML = `
+          <div class="flex items-center justify-between gap-3">
+            <h3 class="text-lg font-bold text-ink">${escapeHtml(city.name)}</h3>
+            <span class="rounded-full px-3 py-1 text-xs font-semibold ${status.badgeClass}">${status.label}</span>
+          </div>
+          <p class="mt-3 text-sm text-slate-600">${escapeHtml(city.region)}</p>
+          <p class="mt-4 text-2xl font-black text-ink">${formatDecimal(city.bedsPer1000)} leitos/1.000</p>
+          <p class="mt-3 text-sm leading-6 text-slate-600">${buildBedsNote(city)}</p>
+        `;
+        highlights.appendChild(card);
+      });
+    }
+
+    function renderVaccinationSummary() {
+      document.getElementById("vaccinationHeroAverage").textContent = `${formatPercent(vaccinationSummary.avg2022)}%`;
+      document.getElementById("vaccinationHeroCriticalRegion").textContent = `${vaccinationSummary.regions[0].name} (${formatPercent(vaccinationSummary.regions[0].avg2022)}%)`;
+      document.getElementById("vaccinationHeroNoneHits").textContent = formatNumber(vaccinationSummary.noneHits);
+      document.getElementById("vaccinationBcgCard").textContent = `${formatPercent(vaccinationSummary.avgBCG2022)}%`;
+      document.getElementById("vaccinationPolioCard").textContent = `${formatPercent(vaccinationSummary.avgPolio2022)}%`;
+      document.getElementById("vaccinationTripleCard").textContent = `${formatPercent(vaccinationSummary.avgTriple2022)}%`;
+      document.getElementById("vaccinationNoneHitsCard").textContent = formatNumber(vaccinationSummary.noneHits);
+      document.getElementById("vaccinationMethodNoneHits").textContent = formatNumber(vaccinationSummary.noneHits);
+      document.getElementById("vaccinationMethodTwoPlus").textContent = formatNumber(vaccinationSummary.twoPlusHits);
+
+      createChart("vaccinationCoverageChart", {
+        type: "bar",
+        data: {
+          labels: ["BCG", "Poliomielite", "Tríplice viral", "Meta"],
+          datasets: [{
+            data: [
+              vaccinationSummary.avgBCG2022,
+              vaccinationSummary.avgPolio2022,
+              vaccinationSummary.avgTriple2022,
+              95
+            ],
+            backgroundColor: ["#102a43", "#179f79", "#d97706", "#3dc69b"],
+            borderRadius: 18
+          }]
+        },
+        options: {
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: { y: { beginAtZero: true, suggestedMax: 110 } }
+        }
+      });
+
+      createChart("vaccinationTrendChart", {
+        type: "line",
+        data: {
+          labels: ["2019", "2020", "2021", "2022"],
+          datasets: [
+            {
+              label: "Poliomielite",
+              data: Object.values(vaccinationSummary.polioTrend),
+              borderColor: "#179f79",
+              backgroundColor: "rgba(23, 159, 121, 0.12)",
+              tension: 0.3,
+              fill: false,
+              pointRadius: 4
+            },
+            {
+              label: "Tríplice viral",
+              data: Object.values(vaccinationSummary.tripleTrend),
+              borderColor: "#d97706",
+              backgroundColor: "rgba(217, 119, 6, 0.12)",
+              tension: 0.3,
+              fill: false,
+              pointRadius: 4
+            }
+          ]
+        },
+        options: {
+          maintainAspectRatio: false,
+          plugins: { legend: { position: "bottom" } },
+          scales: { y: { beginAtZero: true, suggestedMax: 110 } }
+        }
+      });
+
+      createChart("vaccinationRegionsChart", {
+        type: "bar",
+        data: {
+          labels: vaccinationSummary.regions.map((region) => region.name),
+          datasets: [{
+            data: vaccinationSummary.regions.map((region) => region.avg2022),
+            backgroundColor: ["#dc2626", "#d97706", "#179f79"],
+            borderRadius: 18
+          }]
+        },
+        options: {
+          indexAxis: "y",
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: { x: { beginAtZero: true, suggestedMax: 110 } }
+        }
+      });
+
+      createChart("vaccinationBottomChart", {
+        type: "bar",
+        data: {
+          labels: vaccinationSummary.bottomMunicipalities.map((city) => city.name),
+          datasets: [{
+            label: "Média 2022",
+            data: vaccinationSummary.bottomMunicipalities.map((city) => city.avg2022),
+            backgroundColor: "#dc2626",
+            borderRadius: 18
+          }]
+        },
+        options: {
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: { y: { beginAtZero: true, suggestedMax: 110 } }
+        }
+      });
+
+      const highlights = document.getElementById("vaccinationHighlights");
+      highlights.innerHTML = "";
+      vaccinationSummary.bottomHighlights.forEach((city) => {
+        const status = getVaccinationStatus(city);
+        const card = document.createElement("article");
+        card.className = `rounded-3xl border p-5 shadow-soft ${status.cardClass}`;
+        card.innerHTML = `
+          <div class="flex items-center justify-between gap-3">
+            <h3 class="text-lg font-bold text-ink">${escapeHtml(city.name)}</h3>
+            <span class="rounded-full px-3 py-1 text-xs font-semibold ${status.badgeClass}">${status.label}</span>
+          </div>
+          <p class="mt-3 text-sm text-slate-600">${escapeHtml(city.region)}</p>
+          <p class="mt-4 text-2xl font-black text-ink">${formatPercent(city.avg2022)}%</p>
+          <p class="mt-3 text-sm leading-6 text-slate-600">${buildVaccinationNote(city)}</p>
+        `;
+        highlights.appendChild(card);
+      });
+    }
+
+    function buildBedsNote(city) {
+      if (city.qualityFlag === "zero_reported") {
+        return "Registro zerado em 2023. O painel mantém o município em destaque para não ocultar a ausência de leitos reportada na base.";
+      }
+
+      if (city.qualityFlag === "inconsistent") {
+        return `A planilha informa ${formatDecimal(city.reportedBedsPer1000)} leitos por mil habitantes, mas o cálculo com população e total de leitos resulta em ${formatDecimal(city.bedsPer1000)}.${city.compositionMismatch ? " A soma de leitos SUS e não SUS também diverge do total informado." : ""}`;
+      }
+
+      if (city.bedsPer1000 >= 3) {
+        return "Cobertura acima da meta da OMS, com capacidade proporcionalmente superior à média estadual.";
+      }
+
+      if (city.bedsPer1000 >= 2) {
+        return "Cobertura intermediária, abaixo da meta de 3 leitos por mil habitantes.";
+      }
+
+      return city.compositionMismatch
+        ? "Oferta baixa de leitos frente à população municipal, com divergência adicional entre o total informado e a soma SUS + não SUS."
+        : "Oferta baixa de leitos frente à população municipal.";
+    }
+
+    function buildVaccinationNote(city) {
+      if (city.targetHits >= 2) {
+        return "O município chegou perto do padrão desejado ou atingiu a meta em pelo menos dois imunizantes em 2022.";
+      }
+
+      if (city.targetHits === 1) {
+        return "Há um ponto de apoio em 2022, mas a média municipal ainda permanece abaixo da meta de 95%.";
+      }
+
+      return "Nenhum dos três imunizantes atingiu a meta em 2022, o que coloca o município em prioridade de acompanhamento.";
+    }
+
+    function updateBedsPanel(query) {
+      const city = bedsByKey.get(normalizeText(query));
+      const name = document.getElementById("bedsResultName");
+      const badge = document.getElementById("bedsResultBadge");
+      const summary = document.getElementById("bedsResultSummary");
+      const region = document.getElementById("bedsResultRegion");
+      const ratio = document.getElementById("bedsResultRatio");
+      const sus = document.getElementById("bedsResultSus");
+      const nonSus = document.getElementById("bedsResultNonSus");
+
+      if (!city) {
+        name.textContent = query ? "Município não encontrado" : "Selecione um município";
+        badge.className = "rounded-full bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-700";
+        badge.textContent = query ? "Sem correspondência" : "Sem consulta";
+        summary.className = "mt-6 rounded-2xl border border-dashed border-slate-300 bg-white p-5 text-sm leading-6 text-slate-500";
+        summary.textContent = query
+          ? "Não encontramos esse município na base de leitos. Verifique a grafia ou tente novamente."
+          : "Nenhum município pesquisado ainda. Ao buscar, você verá a taxa de leitos por mil habitantes e as observações da base.";
+        region.textContent = "-";
+        ratio.textContent = "-";
+        sus.textContent = "-";
+        nonSus.textContent = "-";
+        return;
+      }
+
+      const status = getBedsStatus(city);
+      name.textContent = city.name;
+      badge.className = `rounded-full px-4 py-2 text-sm font-semibold ${status.badgeClass}`;
+      badge.textContent = status.label;
+      summary.className = `mt-6 rounded-2xl border p-5 text-sm leading-6 ${status.cardClass}`;
+      summary.textContent = buildBedsNote(city);
+      region.textContent = city.region;
+      ratio.textContent = `${formatDecimal(city.bedsPer1000)} leitos/1.000`;
+      sus.textContent = formatNumber(city.susBeds2023);
+      nonSus.textContent = formatNumber(city.nonSusBeds2023);
+    }
+
+    function updateVaccinationPanel(query) {
+      const city = vaccinationByKey.get(normalizeText(query));
+      const name = document.getElementById("vaccinationResultName");
+      const badge = document.getElementById("vaccinationResultBadge");
+      const summary = document.getElementById("vaccinationResultSummary");
+      const region = document.getElementById("vaccinationResultRegion");
+      const average = document.getElementById("vaccinationResultAverage");
+      const bcg = document.getElementById("vaccinationResultBcg");
+      const polio = document.getElementById("vaccinationResultPolio");
+      const triple = document.getElementById("vaccinationResultTriple");
+
+      if (!city) {
+        name.textContent = query ? "Município não encontrado" : "Selecione um município";
+        badge.className = "rounded-full bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-700";
+        badge.textContent = query ? "Sem correspondência" : "Sem consulta";
+        summary.className = "mt-6 rounded-2xl border border-dashed border-slate-300 bg-white p-5 text-sm leading-6 text-slate-500";
+        summary.textContent = query
+          ? "Não encontramos esse município na base de vacinação. Verifique a grafia ou tente novamente."
+          : "Nenhum município pesquisado ainda. Ao buscar, você verá os três imunizantes e a média municipal de 2022.";
+        region.textContent = "-";
+        average.textContent = "-";
+        bcg.textContent = "-";
+        polio.textContent = "-";
+        triple.textContent = "-";
+        return;
+      }
+
+      const status = getVaccinationStatus(city);
+      name.textContent = city.name;
+      badge.className = `rounded-full px-4 py-2 text-sm font-semibold ${status.badgeClass}`;
+      badge.textContent = status.label;
+      summary.className = `mt-6 rounded-2xl border p-5 text-sm leading-6 ${status.cardClass}`;
+      summary.textContent = buildVaccinationNote(city);
+      region.textContent = city.region;
+      average.textContent = `${formatPercent(city.avg2022)}%`;
+      bcg.textContent = `${formatPercent(city.bcg2022)}%`;
+      polio.textContent = `${formatPercent(city.polio2022)}%`;
+      triple.textContent = `${formatPercent(city.triple2022)}%`;
+    }
+
+    function populateMunicipalityOptions() {
+      const datalist = document.getElementById("municipalityOptions");
+      datalist.innerHTML = "";
+      allMunicipalities.forEach((name) => {
+        const option = document.createElement("option");
+        option.value = name;
+        datalist.appendChild(option);
+      });
+    }
+
+    function setActiveView(view) {
+      document.querySelectorAll(".app-view").forEach((section) => {
+        section.classList.toggle("hidden", section.dataset.view !== view);
+      });
+
+      document.querySelectorAll(".view-nav").forEach((button) => {
+        const active = button.dataset.viewTarget === view;
+        button.classList.toggle("bg-white/10", active);
+        button.classList.toggle("border-brand-200", active);
+      });
+
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function routeToView(view) {
+      const validViews = new Set(["inicio", "leitos", "vacinacao"]);
+      const target = validViews.has(view) ? view : "inicio";
+      history.replaceState(null, "", `#${target}`);
+      setActiveView(target);
+    }
+
+    const esMunicipalitiesGeoJsonUrl = "https://raw.githubusercontent.com/tbrugz/geodata-br/master/geojson/geojs-32-mun.json";
+
+    function ensureLeafletStylesheet() {
+      return new Promise((resolve, reject) => {
+        const existingLink = document.getElementById("leafletStylesheet");
+        if (existingLink) {
+          if (existingLink.dataset.loaded === "true") {
+            resolve();
+            return;
+          }
+          existingLink.addEventListener("load", () => resolve(), { once: true });
+          existingLink.addEventListener("error", () => reject(new Error("Não foi possível carregar o estilo do mapa.")), { once: true });
+          return;
+        }
+
+        const leafletLink = document.createElement("link");
+        leafletLink.id = "leafletStylesheet";
+        leafletLink.rel = "stylesheet";
+        leafletLink.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+        leafletLink.crossOrigin = "";
+        leafletLink.addEventListener("load", () => {
+          leafletLink.dataset.loaded = "true";
+          resolve();
+        }, { once: true });
+        leafletLink.addEventListener("error", () => reject(new Error("Não foi possível carregar o estilo do mapa.")), { once: true });
+        document.head.appendChild(leafletLink);
+      });
+    }
+
+    function ensureLeafletScript() {
+      return new Promise((resolve, reject) => {
+        if (window.L) {
+          resolve(window.L);
+          return;
+        }
+
+        const existingScript = document.getElementById("leafletScript");
+        if (existingScript) {
+          existingScript.addEventListener("load", () => resolve(window.L), { once: true });
+          existingScript.addEventListener("error", () => reject(new Error("Não foi possível carregar a biblioteca do mapa.")), { once: true });
+          return;
+        }
+
+        const leafletScript = document.createElement("script");
+        leafletScript.id = "leafletScript";
+        leafletScript.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+        leafletScript.crossOrigin = "";
+        leafletScript.addEventListener("load", () => resolve(window.L), { once: true });
+        leafletScript.addEventListener("error", () => reject(new Error("Não foi possível carregar a biblioteca do mapa.")), { once: true });
+        document.head.appendChild(leafletScript);
+      });
+    }
+
+    function getMapCity(key) {
+      return mapState.mode === "beds" ? bedsByKey.get(key) : vaccinationByKey.get(key);
+    }
+
+    function getDefaultMunicipalityStyle() {
+      return {
+        color: "rgba(148, 163, 184, 0.72)",
+        fillColor: "#ffffff",
+        fillOpacity: 0.96,
+        weight: 1.05
+      };
+    }
+
+    function getHoveredMunicipalityStyle() {
+      return {
+        color: "#94a3b8",
+        fillColor: "#f8fafc",
+        fillOpacity: 1,
+        weight: 1.4
+      };
+    }
+
+    function getSelectedMunicipalityStyle(city) {
+      const status = mapState.mode === "beds" ? getBedsStatus(city) : getVaccinationStatus(city);
+      return {
+        color: status.color,
+        fillColor: status.color,
+        fillOpacity: 0.9,
+        weight: 2.4
+      };
+    }
+
+    function getMapStyle(city, key) {
+      if (key && key === mapState.selectedKey && city) {
+        return getSelectedMunicipalityStyle(city);
+      }
+
+      if (key && key === mapState.hoveredKey) {
+        return getHoveredMunicipalityStyle();
+      }
+
+      return getDefaultMunicipalityStyle();
+    }
+
+    function buildPopupContent(city) {
+      if (!city) {
+        return "<strong>Município sem dado consolidado</strong>";
+      }
+
+      if (mapState.mode === "beds") {
+        return `
+          <div class="space-y-1">
+            <strong>${escapeHtml(city.name)}</strong><br>
+            Região: ${escapeHtml(city.region)}<br>
+            Leitos/1.000: ${formatDecimal(city.bedsPer1000)}<br>
+            Leitos SUS: ${formatNumber(city.susBeds2023)}<br>
+            Leitos não SUS: ${formatNumber(city.nonSusBeds2023)}
+          </div>
+        `;
+      }
+
+      return `
+        <div class="space-y-1">
+          <strong>${escapeHtml(city.name)}</strong><br>
+          Região: ${escapeHtml(city.region)}<br>
+          Média 2022: ${formatPercent(city.avg2022)}%<br>
+          BCG: ${formatPercent(city.bcg2022)}%<br>
+          Pólio: ${formatPercent(city.polio2022)}%<br>
+          Tríplice: ${formatPercent(city.triple2022)}%
+        </div>
+      `;
+    }
+
+    function setMapStatusMessage(message, tone = "neutral") {
+      const colors = {
+        neutral: "text-slate-500",
+        loading: "text-brand-700",
+        success: "text-emerald-700",
+        error: "text-danger"
+      };
+      const element = document.getElementById("mapStatusMessage");
+      element.className = `text-sm font-medium ${colors[tone] || colors.neutral}`;
+      element.textContent = message;
+    }
+
+    function renderMapLegend() {
+      const legend = document.getElementById("mapLegend");
+      const description = document.getElementById("mapModalDescription");
+      const title = document.getElementById("mapModalTitle");
+      const items = mapState.mode === "beds"
+        ? [
+            ["#ffffff", "Municípios neutros"],
+            ["#047857", "Selecionado: adequado"],
+            ["#b45309", "Selecionado: atenção"],
+            ["#dc2626", "Selecionado: crítico"]
+          ]
+        : [
+            ["#ffffff", "Municípios neutros"],
+            ["#047857", "Selecionado: melhor cenário"],
+            ["#b45309", "Selecionado: atenção"],
+            ["#dc2626", "Selecionado: crítico"]
+          ];
+
+      title.textContent = mapState.mode === "beds" ? "Mapa de leitos hospitalares" : "Mapa da cobertura vacinal";
+      description.textContent = mapState.mode === "beds"
+        ? "Os municípios permanecem neutros em branco. Apenas o município destacado recebe cor conforme a situação dos leitos."
+        : "Os municípios permanecem neutros em branco. Apenas o município destacado recebe cor conforme a situação vacinal.";
+      legend.innerHTML = items.map(([color, label]) => `
+        <span class="inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 shadow-soft">
+          <span class="h-3 w-3 rounded-full border border-slate-300" style="background:${color}"></span>
+          ${label}
+        </span>
+      `).join("");
+
+      document.getElementById("mapModeBeds").className = `rounded-full px-4 py-2 text-sm font-semibold transition ${mapState.mode === "beds" ? "bg-ink text-white" : "text-slate-700 hover:bg-slate-100"}`;
+      document.getElementById("mapModeVaccination").className = `rounded-full px-4 py-2 text-sm font-semibold transition ${mapState.mode === "vaccination" ? "bg-ink text-white" : "text-slate-700 hover:bg-slate-100"}`;
+    }
+
+    function refreshMapStyles() {
+      if (!mapState.layer) {
+        return;
+      }
+
+      mapState.layer.eachLayer((layer) => {
+        const featureName = layer.feature?.properties?.name || layer.feature?.properties?.nome || "";
+        const key = normalizeText(featureName);
+        const city = getMapCity(key);
+        layer.setStyle(getMapStyle(city, key));
+        layer.bindPopup(buildPopupContent(city));
+      });
+    }
+
+    async function ensureMap() {
+      if (!mapState.leafletPromise) {
+        mapState.leafletPromise = Promise.all([ensureLeafletStylesheet(), ensureLeafletScript()]).then(([, leaflet]) => leaflet);
+      }
+
+      const leaflet = await mapState.leafletPromise;
+
+      if (!mapState.map) {
+        mapState.map = leaflet.map("municipalityLeafletMap", {
+          zoomControl: true,
+          minZoom: 7,
+          preferCanvas: true
+        });
+      }
+
+      if (!mapState.geoJsonPromise) {
+        mapState.geoJsonPromise = fetch(esMunicipalitiesGeoJsonUrl)
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error("Não foi possível carregar a malha municipal do Espírito Santo.");
+            }
+            return response.json();
+          })
+          .then((geojson) => {
+            mapState.layersByKey.clear();
+            mapState.layer = leaflet.geoJSON(geojson, {
+              style: (feature) => {
+                const featureName = feature?.properties?.name || feature?.properties?.nome || "";
+                const key = normalizeText(featureName);
+                const city = getMapCity(key);
+                return getMapStyle(city, key);
+              },
+              onEachFeature: (feature, layer) => {
+                const featureName = feature?.properties?.name || feature?.properties?.nome || "";
+                const key = normalizeText(featureName);
+                mapState.layersByKey.set(key, layer);
+                const city = getMapCity(key);
+                layer.bindPopup(buildPopupContent(city));
+                layer.on("mouseover", () => {
+                  if (mapState.selectedKey === key) {
+                    return;
+                  }
+                  mapState.hoveredKey = key;
+                  layer.setStyle(getHoveredMunicipalityStyle());
+                  if (layer.bringToFront) {
+                    layer.bringToFront();
+                  }
+                });
+                layer.on("mouseout", () => {
+                  if (mapState.hoveredKey === key) {
+                    mapState.hoveredKey = "";
+                  }
+                  const currentCity = getMapCity(key);
+                  layer.setStyle(getMapStyle(currentCity, key));
+                });
+                layer.on("click", () => {
+                  document.getElementById("mapMunicipalitySearch").value = featureName;
+                  focusMunicipalityOnMap(featureName);
+                });
+              }
+            }).addTo(mapState.map);
+
+            mapState.map.fitBounds(mapState.layer.getBounds(), { padding: [24, 24] });
+            setMapStatusMessage("Mapa carregado com os municípios do Espírito Santo.", "success");
+            return mapState.layer;
+          });
+      }
+
+      await mapState.geoJsonPromise;
+      refreshMapStyles();
+      setTimeout(() => mapState.map.invalidateSize(), 150);
+    }
+
+    function focusMunicipalityOnMap(query) {
+      const key = normalizeText(query);
+      const layer = mapState.layersByKey.get(key);
+      mapState.hoveredKey = "";
+      mapState.selectedKey = key;
+
+      if (!key || !layer) {
+        if (mapState.layer) {
+          refreshMapStyles();
+          mapState.map.fitBounds(mapState.layer.getBounds(), { padding: [24, 24] });
+          setMapStatusMessage("Mapa reposicionado para a visão estadual. Os municípios seguem neutros até novo destaque.", "success");
+        }
+        return;
+      }
+
+      refreshMapStyles();
+      if (layer.bringToFront) {
+        layer.bringToFront();
+      }
+      layer.openPopup();
+      setMapStatusMessage(`Destaque aplicado para ${query} sem alterar o zoom do mapa.`, "success");
+    }
+
+    async function openMapModal(mode) {
+      mapState.mode = mode;
+      renderMapLegend();
+      document.getElementById("mapModal").classList.remove("hidden");
+      document.getElementById("mapModal").setAttribute("aria-hidden", "false");
+      document.body.classList.add("overflow-hidden");
+      setMapStatusMessage("Carregando bibliotecas e malha municipal...", "loading");
+
+      try {
+        await ensureMap();
+        refreshMapStyles();
+        if (document.getElementById("mapMunicipalitySearch").value) {
+          focusMunicipalityOnMap(document.getElementById("mapMunicipalitySearch").value);
+        } else {
+          setMapStatusMessage("Mapa carregado. Os municípios estão neutros; selecione um para destacar.", "success");
+        }
+      } catch (error) {
+        setMapStatusMessage(error.message, "error");
+      }
+    }
+
+    function closeMapModal() {
+      document.getElementById("mapModal").classList.add("hidden");
+      document.getElementById("mapModal").setAttribute("aria-hidden", "true");
+      document.body.classList.remove("overflow-hidden");
+    }
+
+    function openConclusionsModal() {
+      document.getElementById("conclusionsModal").classList.remove("hidden");
+      document.getElementById("conclusionsModal").setAttribute("aria-hidden", "false");
+      document.body.classList.add("overflow-hidden");
+      document.getElementById("closeConclusionsModalButton").focus();
+    }
+
+    function closeConclusionsModal() {
+      document.getElementById("conclusionsModal").classList.add("hidden");
+      document.getElementById("conclusionsModal").setAttribute("aria-hidden", "true");
+      document.body.classList.remove("overflow-hidden");
+      document.getElementById("openConclusionsModalButton").focus();
+    }
+
+    function attachEvents() {
+      document.querySelectorAll("[data-view-target]").forEach((button) => {
+        button.addEventListener("click", () => {
+          routeToView(button.dataset.viewTarget);
+        });
+      });
+
+      document.querySelectorAll("[data-open-map-mode]").forEach((button) => {
+        button.addEventListener("click", () => {
+          openMapModal(button.dataset.openMapMode);
+        });
+      });
+
+      document.getElementById("openConclusionsModalButton").addEventListener("click", openConclusionsModal);
+      document.getElementById("closeConclusionsModalButton").addEventListener("click", closeConclusionsModal);
+      document.getElementById("conclusionsModalBackdrop").addEventListener("click", closeConclusionsModal);
+
+      document.getElementById("bedsSearch").addEventListener("input", (event) => {
+        updateBedsPanel(event.target.value);
+      });
+
+      document.getElementById("vaccinationSearch").addEventListener("input", (event) => {
+        updateVaccinationPanel(event.target.value);
+      });
+
+      document.getElementById("closeMapModalButton").addEventListener("click", closeMapModal);
+      document.getElementById("mapModalBackdrop").addEventListener("click", closeMapModal);
+
+      document.getElementById("mapModeBeds").addEventListener("click", async () => {
+        mapState.mode = "beds";
+        renderMapLegend();
+        refreshMapStyles();
+        if (mapState.selectedKey) {
+          focusMunicipalityOnMap(document.getElementById("mapMunicipalitySearch").value || mapState.selectedKey);
+        } else {
+          setMapStatusMessage("Mapa ajustado para leitos. Os municípios continuam neutros até novo destaque.", "success");
+        }
+      });
+
+      document.getElementById("mapModeVaccination").addEventListener("click", async () => {
+        mapState.mode = "vaccination";
+        renderMapLegend();
+        refreshMapStyles();
+        if (mapState.selectedKey) {
+          focusMunicipalityOnMap(document.getElementById("mapMunicipalitySearch").value || mapState.selectedKey);
+        } else {
+          setMapStatusMessage("Mapa ajustado para vacinação. Os municípios continuam neutros até novo destaque.", "success");
+        }
+      });
+
+      document.getElementById("mapMunicipalitySearch").addEventListener("input", (event) => {
+        focusMunicipalityOnMap(event.target.value);
+      });
+
+      document.getElementById("clearMapHighlightButton").addEventListener("click", () => {
+        document.getElementById("mapMunicipalitySearch").value = "";
+        focusMunicipalityOnMap("");
+      });
+
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && document.getElementById("mapModal").getAttribute("aria-hidden") === "false") {
+          closeMapModal();
+        }
+
+        if (event.key === "Escape" && document.getElementById("conclusionsModal").getAttribute("aria-hidden") === "false") {
+          closeConclusionsModal();
+        }
+      });
+
+      window.addEventListener("hashchange", () => {
+        setActiveView(window.location.hash.replace("#", "") || "inicio");
+      });
+    }
+
+    function initialize() {
+      populateMunicipalityOptions();
+      renderHomeSummary();
+      renderBedsSummary();
+      renderVaccinationSummary();
+      updateBedsPanel("");
+      updateVaccinationPanel("");
+      renderMapLegend();
+      attachEvents();
+      routeToView(window.location.hash.replace("#", "") || "inicio");
+    }
+
+    initialize();
+  </script>
+</body>
+</html>
