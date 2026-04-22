@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Leitos - Espírito Santo</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; color: #333; margin: 20px; }
+        h1 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        .container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .stats { display: flex; gap: 20px; margin-bottom: 20px; }
+        .card { background: #e8f4fd; padding: 15px; border-radius: 5px; flex: 1; border-left: 5px solid #3498db; }
+        .warning { background: #fff3cd; border-left: 5px solid #ffc107; padding: 15px; margin-bottom: 20px; border-radius: 5px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 13px; }
+        th { background-color: #3498db; color: white; padding: 12px; text-align: left; position: sticky; top: 0; }
+        td { padding: 10px; border-bottom: 1px solid #ddd; }
+        tr:hover { background-color: #f1f1f1; }
+        .missing { color: #d9534f; font-weight: bold; background-color: #f9d6d5; }
+        .status-ok { color: #28a745; font-weight: bold; }
+        .status-error { color: #dc3545; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Análise de Leitos Hospitalares - ES</h1>
+    
+    <div id="validacao" class="warning">
+        Verificando integridade dos dados...
+    </div>
+
+    <div class="stats">
+        <div class="card">
+            <strong>Municípios Encontrados:</strong> <span id="count-municipios">0</span> / 78
+        </div>
+        <div class="card">
+            <strong>Dados Faltantes:</strong> <span id="count-missing">0</span> campos
+        </div>
+    </div>
+
+    <table id="tabela-dados">
+        <thead>
+            <tr>
+                <th>Município</th>
+                <th>Região Saúde</th>
+                <th>Pop. 2022</th>
+                <th>SUS 2019</th>
+                <th>SUS 2021</th>
+                <th>SUS 2023</th>
+                <th>Não SUS 2023</th>
+                <th>Total 2023</th>
+                <th>Leitos/1k Hab</th>
+                <th>Ref. OMS</th>
+            </tr>
+        </thead>
+        <tbody>
+            </tbody>
+    </table>
+</div>
+
+<script>
+// Exemplo de dados CSV integrado (Você pode substituir pelo carregamento de um arquivo .csv externo)
+const csvData = `Município,Região de Saúde,População (2022),Leitos SUS (2019),Leitos SUS (2021),Leitos SUS (2023),Leitos Não SUS (2023),Total Leitos (2023),Leitos/Mil Hab (2023),Ref. OMS
+Afonso Cláudio,Metropolitana,30.603,44,46,45,19,64,"2,09",3
+Água Doce do Norte,Central Norte,12.402,10,11,11,1,12,"0,97",3
+Águia Branca,Central Norte,9.714,7,7,10,1,11,"1,13",3
+Alegre,Sul,31.403,38,37,35,7,42,"1,34",3
+Alfredo Chaves,Sul,13.836,0,0,0,0,0,0,3
+Alto Rio Novo,Central Norte,7.831,7,7,6,0,6,"0,77",3
+Anchieta,Sul,26.703,29,29,28,5,33,"1,24",3
+Apiacá,Sul,8.203,9,7,7,2,9,"1,1",3
+Aracruz,Metropolitana,108.416,166,160,159,69,228,"2,1",3
+Atílio Vivácqua,Sul,12.060,10,10,11,0,11,"0,91",3
+Baixo Guandu,Central Norte,29.803,28,23,27,5,32,"1,07",3
+Barra de São Francisco,Central Norte,42.498,61,61,61,0,61,"1,44",3
+Boa Esperança,Central Norte,19.203,17,16,17,1,18,"0,94",3
+Bom Jesus do Norte,Sul,9.803,10,9,10,3,13,"1,33",3
+Brejetuba,Metropolitana,12.987,17,21,20,9,29,"2,23",3
+Cachoeiro de Itapemirim,Sul,185.784,354,482,20,9,29,"2,23",3
+Cariacica,Metropolitana,406.542,618,600,0,264,264,"0,65",3
+Castelo,Sul,37.803,45,44,40,9,49,"1,3",3
+Colatina,Central Norte,119.992,336,356,40,9,49,"1,3",3
+Conceição da Barra,Central Norte,45.280,40,40,39,5,44,"0,97",3
+Conceição do Castelo,Metropolitana,17.482,26,23,26,10,36,"2,06",3
+Divino de São Lourenço,Sul,5.803,7,5,7,1,8,"1,38",3
+Domingos Martins,Metropolitana,33.551,93,95,95,7,102,"1,38",3
+Dores do Rio Preto,Sul,7.803,8,10,6,0,6,"0,77",3
+Ecoporanga,Central Norte,25.314,23,19,21,4,25,"0,99",3
+Fundão,Metropolitana,21.194,11,11,21,4,25,"0,99",3
+Governador Lindenberg,Central Norte,11.620,9,10,11,0,11,"0,95",3
+Guaçuí,Sul,24.603,26,25,26,7,33,"1,34",3
+Guarapari,Metropolitana,124.656,59,59,58,12,70,"1,342",3
+Ibatiba,Metropolitana,21.304,30,32,29,14,43,"2,02",3
+Ibiraçu,Metropolitana,12.890,21,20,19,9,28,"2,17",3
+Ibitirama,Sul,9.550,0,0,0,0,0,0,3
+Iconha,Sul,13.803,13,14,13,4,17,"1,23",3
+Irupi,Sul,12.403,13,13,14,2,16,"1,29",3
+Itaguaçu,Metropolitana,14.320,20,23,21,9,30,"2,09",3
+Itapemirim,Sul,34.493,120,84,14,2,16,"1,29",3
+Itarana,Metropolitana,11.018,18,14,13,7,20,"1,82",3
+Iúna,Sul,23.403,25,24,24,6,30,"1,28",3
+Jaguaré,Central Norte,27.503,25,23,24,3,27,"0,98",3
+Jerônimo Monteiro,Sul,11.803,13,15,12,3,15,"1,27",3
+João Neiva,Metropolitana,16.187,32,33,24,3,27,"0,98",3
+Laranja da Terra,Metropolitana,11.640,16,15,16,8,24,"2,06",3
+Linhares,Central Norte,166.786,154,268,33,18,51,"0,31",3
+Mantenópolis,Central Norte,12.259,0,0,0,0,0,0,3
+Marataízes,Sul,39.203,45,45,42,10,52,"1,33",3
+Marechal Floriano,Metropolitana,16.214,154,23,22,11,33,"2,04",3
+Marilândia,Central Norte,11.402,10,10,7,1,8,"0,7",3
+Mimoso do Sul,Sul,26.803,31,30,31,6,37,"1,38",3
+Montanha,Central Norte,19.128,32,32,22,11,33,"2,04",3
+Mucurici,Central Norte,7.803,7,5,8,0,8,"1,03",3
+Muniz Freire,Sul,17.351,34,30,31,6,37,"1,38",3
+Muqui,Sul,14.603,14,16,15,2,17,"1,16",3
+Nova Venécia,Central Norte,47.214,7,39,42,6,48,"1,02",3
+Pancas,Central Norte,22.814,20,19,19,3,22,"0,96",3
+Pedro Canário,Central Norte,26.503,23,23,21,3,24,"0,91",3
+Pinheiros,Central Norte,24.803,22,20,19,2,21,"0,85",3
+Piúma,Sul,24.603,30,28,28,6,34,"1,38",3
+Ponto Belo,Central Norte,8.904,8,7,6,1,7,"0,79",3
+Presidente Kennedy,Sul,11.203,14,11,14,1,15,"1,34",3
+Rio Bananal,Central Norte,18.519,26,26,28,31,34,"1,38",3
+Rio Novo do Sul,Sul,12.603,16,15,15,4,19,"1,51",3
+Santa Leopoldina,Metropolitana,13.076,21,18,25,7,32,"2,45",3
+Santa Maria de Jetibá,Metropolitana,40.242,63,57,59,26,85,"2,11",3
+Santa Teresa,Metropolitana,24.390,38,38,35,15,50,"2,05",3
+São Domingos do Norte,Central Norte,9.203,9,6,7,0,7,"0,76",3
+São Gabriel da Palha,Central Norte,38.014,32,30,30,4,34,"0,89",3
+São José do Calçado,Sul,10.203,12,12,10,3,13,"1,27",3
+São Mateus,Central Norte,131.491,117,115,111,20,131,1,3
+São Roque do Canaã,Central Norte,10.886,0,0,0,0,0,0,3
+Serra,Metropolitana,529.583,805,781,765,343,1108,"2,09",3
+Sooretama,Central Norte,26.503,22,23,17,0,17,"0,64",3
+Vargem Alta,Sul,17.803,18,18,21,5,26,"1,46",3
+Venda Nova do Imigrante,Metropolitana,25.330,61,64,69,15,84,"3,32",3
+Viana,Metropolitana,79.010,121,118,115,51,166,"2,1",3
+Vila Pavão,Central Norte,9.403,8,7,9,0,9,"0,96",3
+Vila Valério,Central Norte,13.728,0,0,0,0,0,0,3
+Vila Velha,Metropolitana,506.395,771,750,734,330,1064,"2,1",3
+Vitória,Metropolitana,358.267,1214,1088,1186,651,1837,"5,13",3`;
+
+// Lista simplificada dos 78 municípios do ES para conferência
+const listaMunicipiosES = [
+    "Afonso Cláudio", "Água Doce do Norte", "Águia Branca", "Alegre", "Alfredo Chaves", "Alto Rio Novo", "Anchieta", "Apiacá", "Aracruz", "Atílio Vivácqua", "Baixo Guandu", "Barra de São Francisco", "Boa Esperança", "Bom Jesus do Norte", "Brejetuba", "Cachoeiro de Itapemirim", "Cariacica", "Castelo", "Colatina", "Conceição da Barra", "Conceição do Castelo", "Divino de São Lourenço", "Domingos Martins", "Dores do Rio Preto", "Ecoporanga", "Fundão", "Governador Lindenberg", "Guaçuí", "Guarapari", "Ibatiba", "Ibiraçu", "Ibitirama", "Iconha", "Irupi", "Itaguaçu", "Itapemirim", "Itarana", "Iúna", "Jaguaré", "Jerônimo Monteiro", "João Neiva", "Laranja da Terra", "Linhares", "Mantenópolis", "Marataízes", "Marechal Floriano", "Marilândia", "Mimoso do Sul", "Montanha", "Mucurici", "Muniz Freire", "Muqui", "Nova Venécia", "Pancas", "Pedro Canário", "Pinheiros", "Piúma", "Ponto Belo", "Presidente Kennedy", "Rio Bananal", "Rio Novo do Sul", "Santa Leopoldina", "Santa Maria de Jetibá", "Santa Teresa", "São Domingos do Norte", "São Gabriel da Palha", "São José do Calçado", "São Mateus", "São Roque do Canaã", "Serra", "Sooretama", "Vargem Alta", "Venda Nova do Imigrante", "Viana", "Vila Pavão", "Vila Valério", "Vila Velha", "Vitória"
+];
+
+function processarDados() {
+    const parsed = Papa.parse(csvData, { header: true, skipEmptyLines: true });
+    const dados = parsed.data;
+    const tbody = document.querySelector('#tabela-dados tbody');
+    let missingCount = 0;
+    const municipiosNoArquivo = dados.map(d => d.municipio.trim());
+
+    // 1. Limpar tabela
+    tbody.innerHTML = "";
+
+    // 2. Renderizar e checar dados faltantes por linha
+    dados.forEach(row => {
+        let tr = document.createElement('tr');
+        let htmlRow = "";
+        
+        Object.values(row).forEach(val => {
+            const isMissing = val === "" || val === undefined || val === null;
+            if (isMissing) missingCount++;
+            htmlRow += `<td class="${isMissing ? 'missing' : ''}">${isMissing ? 'FALTANDO' : val}</td>`;
+        });
+
+        tr.innerHTML = htmlRow;
+        tbody.appendChild(tr);
+    });
+
+    // 3. Validação dos 78 municípios
+    const faltantesES = listaMunicipiosES.filter(m => !municipiosNoArquivo.includes(m));
+    const divValidacao = document.getElementById('validacao');
+    
+    if (faltantesES.length === 0 && municipiosNoArquivo.length >= 78) {
+        divValidacao.innerHTML = `<span class="status-ok">✔ Todos os 78 municípios do ES estão presentes.</span>`;
+        divValidacao.className = "card"; 
+    } else {
+        divValidacao.innerHTML = `
+            <span class="status-error">✖ Atenção: Faltam ${faltantesES.length} municípios do ES no arquivo!</span><br>
+            <small>Exemplos faltantes: ${faltantesES.slice(0, 5).join(', ')}...</small>
+        `;
+    }
+
+    // 4. Atualizar contadores
+    document.getElementById('count-municipios').innerText = municipiosNoArquivo.length;
+    document.getElementById('count-missing').innerText = missingCount;
+}
+
+// Executar ao carregar
+window.onload = processarDados;
+
+</script>
+
+</body>
+</html>
